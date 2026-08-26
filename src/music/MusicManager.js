@@ -99,14 +99,18 @@ class MusicManager {
     queue.paused = false;
 
     // Send Now Playing notification
+    const progressBar = this.getProgressBar(0, song.durationMs || 210000, 14);
     const embed = new RotiEmbed()
       .setTitle('🎵 Now Playing')
-      .setDescription(`[**${song.title}**](${song.url})`)
+      .setDescription(`[**${song.title}**](${song.url})\n\n\`${progressBar}\`\n\`[ 0:00 / ${song.durationStr || '3:30'} ]\``)
       .setThumbnail(song.thumbnail || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500')
       .addFields(
-        { name: 'Duration', value: `\`${song.durationStr || '3:45'}\``, inline: true },
-        { name: 'Requested by', value: `<@${song.requesterId}>`, inline: true },
-        { name: 'Volume', value: `\`${queue.volume}%\``, inline: true }
+        { name: '👤 Artist / Channel', value: `[${song.artist || 'Artist'}](${song.artistUrl || song.url})`, inline: true },
+        { name: '📡 Source Platform', value: `\`${song.source || '🔴 YouTube Music'}\``, inline: true },
+        { name: '👁️ Total Views', value: `\`${song.views || '1,000,000+'}\``, inline: true },
+        { name: '🔊 Volume', value: `\`${queue.volume}%\``, inline: true },
+        { name: '🔁 Loop Mode', value: `\`${queue.loop.toUpperCase()}\``, inline: true },
+        { name: '🙋 Requested by', value: `<@${song.requesterId}>`, inline: true }
       )
       .setColor(botConfig.colors.teal);
 

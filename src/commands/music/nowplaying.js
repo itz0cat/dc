@@ -35,9 +35,12 @@ class NowplayingCommand extends Command {
       .setDescription(`[**${song.title}**](${song.url})\n\n\`${progressBar}\`\n\`[ ${currentFormatted} / ${totalFormatted} ]\``)
       .setThumbnail(song.thumbnail)
       .addFields(
-        { name: 'Requested By', value: `<@${song.requesterId}>`, inline: true },
-        { name: 'Volume', value: `\`${queue.volume}%\``, inline: true },
-        { name: 'Loop', value: `\`${queue.loop.toUpperCase()}\``, inline: true }
+        { name: '👤 Artist / Channel', value: `[${song.artist || 'Artist'}](${song.artistUrl || song.url})`, inline: true },
+        { name: '📡 Platform', value: `\`${song.source || '🔴 YouTube Music'}\``, inline: true },
+        { name: '👁️ Views', value: `\`${song.views || '1,000,000+'}\``, inline: true },
+        { name: '🔊 Volume', value: `\`${queue.volume}%\``, inline: true },
+        { name: '🔁 Loop Mode', value: `\`${queue.loop.toUpperCase()}\``, inline: true },
+        { name: '🙋 Requested By', value: `<@${song.requesterId}>`, inline: true }
       )
       .setColor(botConfig.colors.teal);
 
