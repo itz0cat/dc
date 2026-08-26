@@ -2,11 +2,12 @@ const { Collection, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('di
 const RotiEmbed = require('../utils/embed.js');
 const botConfig = require('../config.js');
 const { formatDuration } = require('../utils/time.js');
+const yts = require('yt-search');
 
 class MusicManager {
   constructor(client) {
     this.client = client;
-    this.queues = new Collection(); // GuildId -> Queue Object
+    this.queues = new Collection();
   }
 
   getQueue(guildId) {
@@ -22,12 +23,12 @@ class MusicManager {
             guild_id: guild.id,
             channel_id: channelId,
             self_mute: false,
-            self_deaf: false // NOT deafened
+            self_deaf: false
           }
         });
       }
     } catch (e) {
-      this.client.logger.warn(`Failed to send Voice State Update: ${e.message}`);
+      this.client.logger.warn(`Failed to send voice state update: ${e.message}`);
     }
   }
 
@@ -44,10 +45,15 @@ class MusicManager {
           }
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      this.client.logger.warn(`Failed to send voice leave update: ${e.message}`);
+    }
   }
 
   createQueue(guildId, textChannel, voiceChannel) {
+    const existing = this.queues.get(guildId);
+    if (existing && existing.timer) clearTimeout(existing.timer);
+
     this.joinVoice(voiceChannel.guild, voiceChannel.id);
 
     const queue = {
@@ -55,9 +61,13 @@ class MusicManager {
       textChannel,
       voiceChannel,
       songs: [],
+      history: [],
       current: null,
       volume: 80,
-      loop: 'off', // 'off', 'track', 'queue'
+      loop: 'off',
+      filter: 'none',
+      autoplay: false,
+      voteskips: new Set(),
       playing: false,
       paused: false,
       startedAt: 0,
@@ -74,9 +84,16 @@ class MusicManager {
     const queue = this.queues.get(guildId);
     if (!queue) return;
     if (queue.timer) clearTimeout(queue.timer);
-    
+
+    // Check if 24/7 mode is active
+    let is247 = false;
+    try {
+      const row = this.client.db.prepare('SELECT twenty_four_seven FROM music_guild_configs WHERE guild_id = ?').get(guildId);
+      if (row && row.twenty_four_seven) is247 = true;
+    } catch (e) {}
+
     const guild = this.client.guilds.cache.get(guildId);
-    if (guild) {
+    if (guild && !is247) {
       this.leaveVoice(guild);
     }
 
@@ -121,22 +138,28 @@ class MusicManager {
   async play(queue, song) {
     if (queue.timer) clearTimeout(queue.timer);
 
+    if (queue.current) {
+      queue.history.push(queue.current);
+    }
+
     queue.current = song;
     queue.startedAt = Date.now();
     queue.seekOffset = 0;
     queue.playing = true;
     queue.paused = false;
+    queue.voteskips.clear();
 
-    // Ensure bot is in voice channel
     if (queue.voiceChannel) {
       this.joinVoice(queue.voiceChannel.guild, queue.voiceChannel.id);
     }
+
+    const durationMs = song.durationMs || 210000;
 
     const embed = new RotiEmbed()
       .setAuthor({ name: `${song.source || 'Spotify'} Now Playing`, iconURL: song.sourceIconUrl || 'https://cdn-icons-png.flaticon.com/512/174/174872.png' })
       .setDescription(
         `• [**${song.title}**](${song.url})\n` +
-        `• **Duration:** \`${song.durationStr || '03m 53s'}\` - (<@${song.requesterId}>)`
+        `• **Duration:** \`${song.durationStr || formatDuration(durationMs)}\` - (<@${song.requesterId}>)`
       )
       .setThumbnail(song.thumbnail || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500')
       .setColor(song.sourceColor || 0x1DB954);
@@ -144,14 +167,12 @@ class MusicManager {
     const components = this.getMusicButtons(false);
     queue.message = await queue.textChannel.send({ embeds: [embed], components }).catch(() => null);
 
-    // Schedule next song when duration expires
-    const durationMs = song.durationMs || 210000;
     queue.timer = setTimeout(() => {
       this.handleSongEnd(queue.guildId);
     }, durationMs);
   }
 
-  handleSongEnd(guildId) {
+  async handleSongEnd(guildId) {
     const queue = this.queues.get(guildId);
     if (!queue) return;
 
@@ -166,16 +187,44 @@ class MusicManager {
     if (queue.songs.length > 0) {
       const nextSong = queue.songs.shift();
       return this.play(queue, nextSong);
-    } else {
-      queue.playing = false;
-      queue.current = null;
-      const finishedEmbed = new RotiEmbed()
-        .setTitle('🎵 Queue Concluded')
-        .setDescription('No more songs remaining in the queue. Leaving voice channel.')
-        .setColor(botConfig.colors.teal);
-      queue.textChannel.send({ embeds: [finishedEmbed] }).catch(() => {});
-      this.destroyQueue(guildId);
     }
+
+    // Check if autoplay is enabled
+    if (queue.autoplay && queue.current) {
+      try {
+        const query = `${queue.current.artist || ''} song recommendation`;
+        const res = await yts(query);
+        if (res && res.videos && res.videos.length > 1) {
+          const autoVideo = res.videos[1];
+          const mins = Math.floor((autoVideo.seconds || 210) / 60);
+          const secs = (autoVideo.seconds || 210) % 60;
+          const autoSong = {
+            title: autoVideo.title,
+            url: autoVideo.url,
+            artist: autoVideo.author?.name || 'Artist',
+            artistUrl: autoVideo.author?.url || autoVideo.url,
+            durationStr: `${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`,
+            durationMs: (autoVideo.seconds || 210) * 1000,
+            views: autoVideo.views ? autoVideo.views.toLocaleString() : 'N/A',
+            thumbnail: autoVideo.thumbnail || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500',
+            source: 'Spotify Autoplay',
+            sourceIconUrl: 'https://cdn-icons-png.flaticon.com/512/174/174872.png',
+            sourceColor: 0x1DB954,
+            requesterId: this.client.user.id
+          };
+          return this.play(queue, autoSong);
+        }
+      } catch (e) {}
+    }
+
+    queue.playing = false;
+    queue.current = null;
+    const finishedEmbed = new RotiEmbed()
+      .setTitle('Queue Concluded')
+      .setDescription('No more songs remaining in the queue.')
+      .setColor(botConfig.colors.teal);
+    queue.textChannel.send({ embeds: [finishedEmbed] }).catch(() => {});
+    this.destroyQueue(guildId);
   }
 
   getProgressBar(currentMs, totalMs, length = 14) {
