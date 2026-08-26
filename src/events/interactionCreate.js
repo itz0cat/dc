@@ -261,6 +261,71 @@ module.exports = async (client, interaction) => {
       }
     }
 
+    // === MUSIC INTERACTIVE CONTROLLER BUTTONS ===
+    if (customId.startsWith('music_')) {
+      const queue = client.music.getQueue(guild.id);
+      if (!queue) {
+        return interaction.reply({ content: '❌ No active music queue on this server.', ephemeral: true });
+      }
+
+      if (!member.voice.channel) {
+        return interaction.reply({ content: '❌ You must be connected to a voice channel to use music controls.', ephemeral: true });
+      }
+
+      if (customId === 'music_pause') {
+        if (queue.paused) {
+          queue.paused = false;
+          await interaction.update({ components: client.music.getMusicButtons(false) });
+          return interaction.followUp({ content: '▶️ Resumed music playback.', ephemeral: true });
+        } else {
+          queue.paused = true;
+          await interaction.update({ components: client.music.getMusicButtons(true) });
+          return interaction.followUp({ content: '⏸️ Paused music playback.', ephemeral: true });
+        }
+      }
+
+      if (customId === 'music_skip') {
+        client.music.handleSongEnd(guild.id);
+        return interaction.reply({ content: '⏭️ Skipped to the next song in queue!', ephemeral: true });
+      }
+
+      if (customId === 'music_shuffle') {
+        if (queue.songs.length <= 1) {
+          return interaction.reply({ content: '⚠️ Need at least 2 songs in the queue to shuffle.', ephemeral: true });
+        }
+        for (let i = queue.songs.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [queue.songs[i], queue.songs[j]] = [queue.songs[j], queue.songs[i]];
+        }
+        return interaction.reply({ content: `🔀 Shuffled **${queue.songs.length}** songs in queue!`, ephemeral: true });
+      }
+
+      if (customId === 'music_stop') {
+        client.music.destroyQueue(guild.id);
+        return interaction.reply({ content: '⏹️ Stopped music playback and left voice channel.', ephemeral: true });
+      }
+
+      if (customId === 'music_like') {
+        if (!queue.current) {
+          return interaction.reply({ content: '❌ No song is currently playing.', ephemeral: true });
+        }
+        const song = queue.current;
+        const likeEmbed = new RotiEmbed()
+          .setTitle('💚 Liked Track from ' + guild.name)
+          .setDescription(`[**${song.title}**](${song.url})\n\n• **Artist:** ${song.artist}\n• **Duration:** \`${song.durationStr}\`\n• **Platform:** \`${song.source}\``)
+          .setThumbnail(song.thumbnail)
+          .setColor(song.sourceColor || 0x1DB954);
+
+        try {
+          await interaction.user.send({ embeds: [likeEmbed] });
+          return interaction.reply({ content: '📬 Saved song to your Direct Messages!', ephemeral: true });
+        } catch (e) {
+          return interaction.reply({ content: '❌ Could not send DM. Please enable DMs for this server.', ephemeral: true });
+        }
+      }
+      return;
+    }
+
     // === GIVEAWAY ENTER ===
     if (customId.startsWith('ga_enter:')) {
       const gaId = customId.split(':')[1];

@@ -1,14 +1,7 @@
-const { Collection } = require('discord.js');
+const { Collection, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const RotiEmbed = require('../utils/embed.js');
 const botConfig = require('../config.js');
 const { formatDuration } = require('../utils/time.js');
-
-let djsVoice = null;
-try {
-  djsVoice = require('@discordjs/voice');
-} catch (e) {
-  // Voice native binding not available in Android PRoot namespace, running pure JS manager
-}
 
 class MusicManager {
   constructor(client) {
@@ -29,7 +22,7 @@ class MusicManager {
             guild_id: guild.id,
             channel_id: channelId,
             self_mute: false,
-            self_deaf: true
+            self_deaf: false // NOT deafened
           }
         });
       }
@@ -69,7 +62,8 @@ class MusicManager {
       paused: false,
       startedAt: 0,
       seekOffset: 0,
-      timer: null
+      timer: null,
+      message: null
     };
 
     this.queues.set(guildId, queue);
@@ -89,6 +83,41 @@ class MusicManager {
     this.queues.delete(guildId);
   }
 
+  getMusicButtons(isPaused = false) {
+    const row1 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('music_pause')
+        .setLabel(isPaused ? 'Resume' : 'Pause')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji(isPaused ? '▶️' : '⏸️'),
+      new ButtonBuilder()
+        .setCustomId('music_skip')
+        .setLabel('Skip')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('⏭️'),
+      new ButtonBuilder()
+        .setCustomId('music_shuffle')
+        .setLabel('Shuffle')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('🔀')
+    );
+
+    const row2 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('music_stop')
+        .setLabel('Stop')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('⏹️'),
+      new ButtonBuilder()
+        .setCustomId('music_like')
+        .setLabel('Like')
+        .setStyle(ButtonStyle.Success)
+        .setEmoji('💚')
+    );
+
+    return [row1, row2];
+  }
+
   async play(queue, song) {
     if (queue.timer) clearTimeout(queue.timer);
 
@@ -98,23 +127,22 @@ class MusicManager {
     queue.playing = true;
     queue.paused = false;
 
-    // Send Now Playing notification
-    const progressBar = this.getProgressBar(0, song.durationMs || 210000, 14);
-    const embed = new RotiEmbed()
-      .setTitle('🎵 Now Playing')
-      .setDescription(`[**${song.title}**](${song.url})\n\n\`${progressBar}\`\n\`[ 0:00 / ${song.durationStr || '3:30'} ]\``)
-      .setThumbnail(song.thumbnail || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500')
-      .addFields(
-        { name: '👤 Artist / Channel', value: `[${song.artist || 'Artist'}](${song.artistUrl || song.url})`, inline: true },
-        { name: '📡 Source Platform', value: `\`${song.source || '🔴 YouTube Music'}\``, inline: true },
-        { name: '👁️ Total Views', value: `\`${song.views || '1,000,000+'}\``, inline: true },
-        { name: '🔊 Volume', value: `\`${queue.volume}%\``, inline: true },
-        { name: '🔁 Loop Mode', value: `\`${queue.loop.toUpperCase()}\``, inline: true },
-        { name: '🙋 Requested by', value: `<@${song.requesterId}>`, inline: true }
-      )
-      .setColor(botConfig.colors.teal);
+    // Ensure bot is in voice channel
+    if (queue.voiceChannel) {
+      this.joinVoice(queue.voiceChannel.guild, queue.voiceChannel.id);
+    }
 
-    queue.textChannel.send({ embeds: [embed] }).catch(() => {});
+    const embed = new RotiEmbed()
+      .setAuthor({ name: `${song.source || 'Spotify'} Now Playing`, iconURL: song.sourceIconUrl || 'https://cdn-icons-png.flaticon.com/512/174/174872.png' })
+      .setDescription(
+        `• [**${song.title}**](${song.url})\n` +
+        `• **Duration:** \`${song.durationStr || '03m 53s'}\` - (<@${song.requesterId}>)`
+      )
+      .setThumbnail(song.thumbnail || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500')
+      .setColor(song.sourceColor || 0x1DB954);
+
+    const components = this.getMusicButtons(false);
+    queue.message = await queue.textChannel.send({ embeds: [embed], components }).catch(() => null);
 
     // Schedule next song when duration expires
     const durationMs = song.durationMs || 210000;
@@ -150,11 +178,11 @@ class MusicManager {
     }
   }
 
-  getProgressBar(currentMs, totalMs, length = 15) {
+  getProgressBar(currentMs, totalMs, length = 14) {
     if (!totalMs || totalMs <= 0) totalMs = 225000;
     const progress = Math.min(1, Math.max(0, currentMs / totalMs));
     const filled = Math.round(progress * length);
-    const empty = length - filled;
+    const empty = Math.max(0, length - filled);
     return '▬'.repeat(filled) + '🔘' + '▬'.repeat(empty);
   }
 }

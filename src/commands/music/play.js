@@ -8,7 +8,7 @@ class PlayCommand extends Command {
   constructor() {
     super({
       name: 'play',
-      description: 'Play a song or playlist from YouTube, YouTube Music, Spotify, SoundCloud, or search query',
+      description: 'Play a song or playlist from Spotify, YouTube Music, SoundCloud, or search',
       category: 'Music',
       aliases: ['p'],
       usage: 'play <song name or URL>',
@@ -21,11 +21,40 @@ class PlayCommand extends Command {
 
   detectSource(query) {
     const q = query.toLowerCase();
-    if (q.includes('music.youtube.com')) return '🔴 YouTube Music';
-    if (q.includes('spotify.com')) return '🟢 Spotify (Matched on YouTube Music)';
-    if (q.includes('soundcloud.com')) return '🟠 SoundCloud';
-    if (q.includes('youtube.com') || q.includes('youtu.be')) return '🔴 YouTube';
-    return '🔴 YouTube Music';
+    if (q.includes('spotify.com')) {
+      return {
+        name: 'Spotify',
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/174/174872.png',
+        color: 0x1DB954
+      };
+    }
+    if (q.includes('music.youtube.com')) {
+      return {
+        name: 'YouTube Music',
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/1384/1384060.png',
+        color: 0xFF0000
+      };
+    }
+    if (q.includes('soundcloud.com')) {
+      return {
+        name: 'SoundCloud',
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/145/145809.png',
+        color: 0xFF5500
+      };
+    }
+    if (q.includes('youtube.com') || q.includes('youtu.be')) {
+      return {
+        name: 'YouTube',
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/1384/1384060.png',
+        color: 0xFF0000
+      };
+    }
+    // Default to Spotify/YouTube Music style
+    return {
+      name: 'Spotify',
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/174/174872.png',
+      color: 0x1DB954
+    };
   }
 
   async execute(ctx, args) {
@@ -43,38 +72,45 @@ class PlayCommand extends Command {
     let song = null;
 
     try {
-      // Search for track using yt-search
       const searchRes = await yts(query);
       const video = searchRes.videos && searchRes.videos.length > 0 ? searchRes.videos[0] : null;
 
       if (!video) {
-        return ctx.sendError('No Results', `Could not find any music matching \`${query}\` on **${platform}**.`);
+        return ctx.sendError('No Results', `Could not find any music matching \`${query}\`.`);
       }
+
+      // Format duration like 03m 53s
+      const mins = Math.floor((video.seconds || 210) / 60);
+      const secs = (video.seconds || 210) % 60;
+      const formattedDuration = `${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
 
       song = {
         title: video.title,
         url: video.url,
         artist: video.author?.name || 'Unknown Artist',
         artistUrl: video.author?.url || video.url,
-        durationStr: video.timestamp || '3:30',
+        durationStr: formattedDuration,
         durationMs: (video.seconds || 210) * 1000,
         views: video.views ? video.views.toLocaleString() : 'N/A',
         thumbnail: video.thumbnail || video.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500',
-        source: platform,
+        source: platform.name,
+        sourceIconUrl: platform.iconUrl,
+        sourceColor: platform.color,
         requesterId: ctx.user.id
       };
     } catch (e) {
-      // Fallback if search fails
       song = {
         title: query.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
         url: query.startsWith('http') ? query : `https://youtube.com/results?search_query=${encodeURIComponent(query)}`,
         artist: 'Various Artists',
         artistUrl: 'https://youtube.com',
-        durationStr: '3:30',
+        durationStr: '03m 30s',
         durationMs: 210000,
         views: '1,000,000+',
         thumbnail: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500',
-        source: platform,
+        source: platform.name,
+        sourceIconUrl: platform.iconUrl,
+        sourceColor: platform.color,
         requesterId: ctx.user.id
       };
     }
@@ -89,23 +125,18 @@ class PlayCommand extends Command {
     if (queue.playing) {
       queue.songs.push(song);
       const embed = new RotiEmbed()
-        .setTitle('➕ Track Added to Queue')
-        .setDescription(`[**${song.title}**](${song.url})`)
-        .setThumbnail(song.thumbnail)
-        .addFields(
-          { name: '👤 Artist / Channel', value: `[${song.artist}](${song.artistUrl})`, inline: true },
-          { name: '📡 Source Platform', value: `\`${song.source}\``, inline: true },
-          { name: '⏱️ Duration', value: `\`${song.durationStr}\``, inline: true },
-          { name: '👁️ Total Views', value: `\`${song.views}\``, inline: true },
-          { name: '🔢 Queue Position', value: `\`#${queue.songs.length}\``, inline: true },
-          { name: '🙋 Requested By', value: `<@${ctx.user.id}>`, inline: true }
+        .setAuthor({ name: `${song.source} Enqueued Track`, iconURL: song.sourceIconUrl })
+        .setDescription(
+          `✅ **Added** [**${song.title}**](${song.url}) **to the queue.**\n\n` +
+          `**Duration :** \`${song.durationStr}\` • **Requestor :** <@${ctx.user.id}> • **Position :** \`${queue.songs.length}\``
         )
-        .setColor(botConfig.colors.teal);
+        .setThumbnail(song.thumbnail)
+        .setColor(song.sourceColor);
       return ctx.reply({ embeds: [embed] });
     } else {
       await ctx.client.music.play(queue, song);
       if (ctx.isSlash) {
-        return ctx.replyEphemeral({ content: `🎶 Started playing **${song.title}** on ${song.source} in <#${voiceChannel.id}>!` });
+        return ctx.replyEphemeral({ content: `🎶 Started playing **${song.title}** in <#${voiceChannel.id}>!` });
       }
     }
   }
