@@ -14,7 +14,7 @@ class HelpCommand extends Command {
   constructor() {
     super({
       name: 'help',
-      description: 'Display the complete interactive Cat command center directory and category menus',
+      description: 'Display the complete interactive command directory and category menu',
       category: 'Utility',
       aliases: ['commands', 'h', 'menu'],
       usage: 'help [command / category]',
@@ -25,87 +25,110 @@ class HelpCommand extends Command {
     });
   }
 
-  getCategoryEmbed(categoryName, client, prefix) {
-    const cmds = client.commands.filter(c => c.category.toLowerCase() === categoryName.toLowerCase());
-    const icons = {
-      music: '🎵',
-      server: '🛠️',
-      moderation: '🛡️',
-      roles: '🎭',
-      automod: '🤖',
-      giveaway: '🎉',
-      highlight: '🔔',
-      minigames: '🎮',
-      fun: '🎲',
-      utility: '⚙️'
+  getCategoryEmbed(categoryKey, client, prefix) {
+    const categoriesMap = {
+      music: { name: 'Music', icon: '🎵', desc: 'High-quality music streaming, queue, audio effects and lyrics' },
+      server: { name: 'Server Management', icon: '🛠️', desc: 'Welcome cards, ticket system, suggestions, starboard, logging & tags' },
+      moderation: { name: 'Moderation', icon: '🛡️', desc: 'Bans, softbans, timeouts, warnings, cases, locks, purges & modlogs' },
+      roles: { name: 'Role Administration', icon: '🎭', desc: 'Button self-roles, dropdown select roles, reaction roles & temproles' },
+      automod: { name: 'AutoMod', icon: '🤖', desc: 'Anti-invite links, anti-external links, anti-spam, caps filter & blacklist words' },
+      giveaway: { name: 'Giveaways', icon: '🎉', desc: 'Interactive timed giveaways, quick reaction drops, rerolls & winner picking' },
+      highlight: { name: 'Highlights', icon: '🔔', desc: 'Custom keyword direct message mention notifications' },
+      minigames: { name: 'Mini-Games', icon: '🎮', desc: 'Blackjack, Tic-Tac-Toe, Connect 4, Snake, Trivia & Rock-Paper-Scissors' },
+      fun: { name: 'Fun & Social', icon: '🎲', desc: 'Memes, cute cat/dog images, jokes, ascii art, ratings, polls & anime actions' },
+      utility: { name: 'Utility', icon: '⚙️', desc: 'Weather, translator, QR generator, URL shortener, userinfo, calc & stats' }
     };
 
-    const icon = icons[categoryName.toLowerCase()] || '📁';
+    const catInfo = categoriesMap[categoryKey.toLowerCase()] || { name: categoryKey, icon: '📁', desc: 'Module commands' };
+    const cmds = client.commands.filter(c => c.category.toLowerCase() === categoryKey.toLowerCase() || (categoryKey.toLowerCase() === 'server' && c.category.toLowerCase() === 'server'));
+
     const embed = new RotiEmbed()
-      .setTitle(`${icon} ${categoryName.toUpperCase()} MODULE (${cmds.size} Commands)`)
-      .setDescription(`Use \`${prefix}<command>\` or \`/<command>\` to execute any command.\nFor detailed parameters, type \`${prefix}help <command>\`.\n`)
+      .setTitle(`${catInfo.icon} ${catInfo.name} Commands`)
+      .setDescription(
+        `*${catInfo.desc}*\n\n` +
+        `Prefix: \`${prefix}\` or use Slash Commands (\`/\`)\n` +
+        `For detailed info on a command: \`${prefix}help <command>\`\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        cmds.map(c => `**\`${prefix}${c.name}\`**\n> ${c.description}${c.aliases.length > 0 ? `\n> *Aliases: ${c.aliases.map(a => `\`${a}\``).join(', ')}*` : ''}`).join('\n\n')
+      )
       .setColor(botConfig.colors.teal);
 
-    const formattedList = cmds.map(c => `**\`${prefix}${c.name}\`** • ${c.description}`).join('\n\n');
-    embed.setDescription(`${embed.data.description}\n${formattedList}`);
     return embed;
   }
 
   getOverviewEmbed(client, prefix) {
     const totalCommands = client.commands.size;
-    const totalCategories = new Set(client.commands.map(c => c.category)).size;
 
     return new RotiEmbed()
-      .setTitle(`🐱 Cat Command Center`)
+      .setTitle(`🛡️ ${botConfig.name} Command Directory`)
       .setDescription(
-        `Welcome to **Cat**! The ultimate high-performance all-in-one Discord bot.\n\n` +
-        `**Command Prefix:** \`${prefix}\` *(e.g. \`${prefix}help\`, \`${prefix}play\`)*\n` +
-        `**Slash Commands:** Fully supported with \`/\`\n` +
-        `**Theme Color:** Teal Blue (\`#00A896\`)\n` +
-        `**Developer:** \`${botConfig.creator}\`\n\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `### 📁 **Available Modules (${totalCategories})**\n` +
-        `> 🎵 **Music** — YouTube/Spotify streaming, queue, volume, loop, lyrics, np\n` +
-        `> 🛠️ **Server Management** — Welcome cards, tickets, suggestions, starboard, logs, tags\n` +
-        `> 🛡️ **Moderation** — Bans, mutes, warnings, cases, locks, purges, modlogs\n` +
-        `> 🎭 **Role Administration** — Button roles, select menus, reaction roles, temprole\n` +
-        `> 🤖 **AutoMod** — Anti-invites, anti-links, anti-spam, caps filter, banned words\n` +
-        `> 🎉 **Giveaways** — Timed interactive giveaways, quick reaction drops, rerolls\n` +
-        `> 🔔 **Highlights** — Custom keyword DM mention notifications\n` +
-        `> 🎮 **Mini-Games** — Blackjack, Tic-Tac-Toe, Connect 4, Snake, Trivia, RPS\n` +
-        `> 🎲 **Fun & Social** — Memes, cats, dogs, jokes, ascii, polls, quotes, anime actions\n` +
-        `> ⚙️ **Utilities** — Weather, translator, QR generator, URL shortener, userinfo, calc\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `📊 **Total Available Commands:** \`${totalCommands}+\`\n\n` +
-        `*Select a category from the dropdown menu below to view full command details.*`
+        `Welcome to **${botConfig.name}**! The premier all-in-one Discord bot.\n` +
+        `Prefix: \`${prefix}\` or use Slash Commands (\`/\`).\n` +
+        `Select a category from the dropdown menu below to view its commands.\n\n` +
+        `🎵 **Music**\n` +
+        `\`${prefix}play\`, \`${prefix}skip\`, \`${prefix}queue\`, \`${prefix}np\`, \`${prefix}volume\`, \`${prefix}lyrics\`\n\n` +
+        `🛠️ **Server Management**\n` +
+        `\`${prefix}welcome\`, \`${prefix}ticket\`, \`${prefix}suggestion\`, \`${prefix}starboard\`, \`${prefix}tag\`, \`${prefix}trigger\`\n\n` +
+        `🛡️ **Moderation**\n` +
+        `\`${prefix}ban\`, \`${prefix}kick\`, \`${prefix}timeout\`, \`${prefix}warn\`, \`${prefix}purge\`, \`${prefix}lock\`, \`${prefix}slowmode\`\n\n` +
+        `🎭 **Role Administration**\n` +
+        `\`${prefix}buttonrole\`, \`${prefix}selectrole\`, \`${prefix}reactionrole\`, \`${prefix}temprole\`, \`${prefix}role\`, \`${prefix}autorole\`\n\n` +
+        `🤖 **AutoMod**\n` +
+        `\`${prefix}automod\`, \`${prefix}banword\`\n\n` +
+        `🎉 **Giveaways & Highlights**\n` +
+        `\`${prefix}giveaway start\`, \`${prefix}giveaway drop\`, \`${prefix}highlight add\`\n\n` +
+        `🎮 **Mini-Games & Fun**\n` +
+        `\`${prefix}blackjack\`, \`${prefix}tictactoe\`, \`${prefix}connectfour\`, \`${prefix}snake\`, \`${prefix}trivia\`, \`${prefix}8ball\`, \`${prefix}meme\`\n\n` +
+        `⚙️ **Utilities**\n` +
+        `\`${prefix}weather\`, \`${prefix}translate\`, \`${prefix}qr\`, \`${prefix}userinfo\`, \`${prefix}serverinfo\`, \`${prefix}calc\`, \`${prefix}ping\``
       )
       .setThumbnail(client.user.displayAvatarURL())
-      .setColor(botConfig.colors.primary);
+      .setColor(botConfig.colors.teal);
   }
 
-  getSelectMenu() {
-    return new ActionRowBuilder().addComponents(
+  getComponents(client) {
+    const selectMenu = new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId('help_select')
-        .setPlaceholder('📂 Select a category to explore commands...')
+        .setPlaceholder('Select a category...')
         .addOptions([
-          { label: 'Home / Overview', value: 'home', description: 'Return to main command center overview', emoji: '🏠' },
-          { label: 'Music', value: 'Music', description: 'Music playback, queue, lyrics, volume, loop', emoji: '🎵' },
-          { label: 'Server Management', value: 'Server', description: 'Tickets, suggestions, welcome, starboard, logs', emoji: '🛠️' },
-          { label: 'Moderation & Cases', value: 'Moderation', description: 'Bans, mutes, kicks, warnings, cases, locks, purge', emoji: '🛡️' },
-          { label: 'Role Administration', value: 'Roles', description: 'Button roles, select menus, temproles, autoroles', emoji: '🎭' },
-          { label: 'AutoMod Protection', value: 'Automod', description: 'Anti-invite, anti-link, anti-spam, blacklist words', emoji: '🤖' },
-          { label: 'Giveaways & Drops', value: 'Giveaway', description: 'Interactive giveaways, timer drops, rerolls', emoji: '🎉' },
-          { label: 'Highlights & Alerts', value: 'Highlight', description: 'Keyword DM alerts and mention tracking', emoji: '🔔' },
-          { label: 'Mini-Games', value: 'Minigames', description: 'Blackjack, Tic-Tac-Toe, Connect 4, Snake, Trivia', emoji: '🎮' },
-          { label: 'Fun & Social', value: 'Fun', description: 'Memes, cats, dogs, jokes, ascii, rate, anime actions', emoji: '🎲' },
-          { label: 'Utilities & Tools', value: 'Utility', description: 'Weather, translate, QR, shortener, userinfo, calc', emoji: '⚙️' }
+          { label: 'Overview', value: 'home', description: 'Return to main command directory', emoji: '🏠' },
+          { label: 'Music', value: 'music', description: 'Music playback, queue, volume, lyrics', emoji: '🎵' },
+          { label: 'Server Management', value: 'server', description: 'Tickets, suggestions, welcome, starboard, logs', emoji: '🛠️' },
+          { label: 'Moderation', value: 'moderation', description: 'Bans, mutes, kicks, warnings, cases, lock, purge', emoji: '🛡️' },
+          { label: 'Role Administration', value: 'roles', description: 'Button roles, select menus, reaction roles, autorole', emoji: '🎭' },
+          { label: 'AutoMod', value: 'automod', description: 'Anti-invite, anti-link, anti-spam, bad words filter', emoji: '🤖' },
+          { label: 'Giveaways', value: 'giveaway', description: 'Timed giveaways, reaction drops, rerolls', emoji: '🎉' },
+          { label: 'Highlights', value: 'highlight', description: 'Keyword DM alerts and mention tracking', emoji: '🔔' },
+          { label: 'Mini-Games', value: 'minigames', description: 'Blackjack, Tic-Tac-Toe, Connect 4, Snake, Trivia', emoji: '🎮' },
+          { label: 'Fun & Social', value: 'fun', description: 'Memes, cat/dog photos, jokes, ascii, anime actions', emoji: '🎲' },
+          { label: 'Utilities', value: 'utility', description: 'Weather, translate, QR, shortener, userinfo, calc', emoji: '⚙️' }
         ])
     );
+
+    const buttonRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel('Invite Cat')
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://discord.com/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`)
+        .setEmoji('✨'),
+      new ButtonBuilder()
+        .setLabel('Documentation')
+        .setStyle(ButtonStyle.Link)
+        .setURL('https://docs.letsroti.com/')
+        .setEmoji('📖'),
+      new ButtonBuilder()
+        .setLabel('GitHub')
+        .setStyle(ButtonStyle.Link)
+        .setURL('https://github.com/itz0cat/dc')
+        .setEmoji('🐙')
+    );
+
+    return [selectMenu, buttonRow];
   }
 
   async execute(ctx, args) {
-    const query = ctx.isSlash ? ctx.raw.options.getString('query') : args.join(' ').toLowerCase();
+    const query = ctx.isSlash ? ctx.raw.options?.getString('query') : args.join(' ').toLowerCase();
     const prefix = ctx.client.db.getPrefix(ctx.guild.id);
 
     // If query matches a specific command
@@ -128,21 +151,20 @@ class HelpCommand extends Command {
       const categories = ['music', 'server', 'moderation', 'roles', 'automod', 'giveaway', 'highlight', 'minigames', 'fun', 'utility'];
       const matchedCat = categories.find(c => c.startsWith(query));
       if (matchedCat) {
-        const capName = matchedCat.charAt(0).toUpperCase() + matchedCat.slice(1);
-        const embed = this.getCategoryEmbed(capName, ctx.client, prefix);
-        return ctx.reply({ embeds: [embed], components: [this.getSelectMenu()] });
+        const embed = this.getCategoryEmbed(matchedCat, ctx.client, prefix);
+        return ctx.reply({ embeds: [embed], components: this.getComponents(ctx.client) });
       }
     }
 
     // Default Overview Page
     const overviewEmbed = this.getOverviewEmbed(ctx.client, prefix);
-    const menu = this.getSelectMenu();
+    const components = this.getComponents(ctx.client);
 
     let msg;
     if (ctx.isSlash) {
-      msg = await ctx.raw.reply({ embeds: [overviewEmbed], components: [menu], fetchReply: true });
+      msg = await ctx.raw.reply({ embeds: [overviewEmbed], components, fetchReply: true });
     } else {
-      msg = await ctx.channel.send({ embeds: [overviewEmbed], components: [menu] });
+      msg = await ctx.channel.send({ embeds: [overviewEmbed], components });
     }
 
     const authorId = ctx.user.id;
@@ -158,17 +180,17 @@ class HelpCommand extends Command {
 
       const val = sel.values[0];
       if (val === 'home') {
-        return sel.update({ embeds: [this.getOverviewEmbed(ctx.client, prefix)], components: [menu] });
+        return sel.update({ embeds: [this.getOverviewEmbed(ctx.client, prefix)], components });
       } else {
-        return sel.update({ embeds: [this.getCategoryEmbed(val, ctx.client, prefix)], components: [menu] });
+        return sel.update({ embeds: [this.getCategoryEmbed(val, ctx.client, prefix)], components });
       }
     });
 
     collector.on('end', () => {
-      const disabledMenu = new ActionRowBuilder().addComponents(
-        StringSelectMenuBuilder.from(menu.components[0]).setDisabled(true)
+      const disabledSelect = new ActionRowBuilder().addComponents(
+        StringSelectMenuBuilder.from(components[0].components[0]).setDisabled(true)
       );
-      msg.edit({ components: [disabledMenu] }).catch(() => {});
+      msg.edit({ components: [disabledSelect, components[1]] }).catch(() => {});
     });
   }
 }
