@@ -1,32 +1,49 @@
+const { SlashCommandBuilder } = require('discord.js');
 const Command = require('../Command.js');
-const { MessageEmbed } = require('discord.js');
-const fetch = require('node-fetch');
+const RotiEmbed = require('../../utils/embed.js');
+const botConfig = require('../../config.js');
 
-module.exports = class CatCommand extends Command {
-  constructor(client) {
-    super(client, {
+class CatCommand extends Command {
+  constructor() {
+    super({
       name: 'cat',
-      aliases: ['kitten', 'kitty'],
+      description: 'Get a cute random cat picture and fun cat fact',
+      category: 'Fun',
+      aliases: ['kitty', 'meow'],
       usage: 'cat',
-      description: 'Finds a random cat for your viewing pleasure.',
-      type: client.types.FUN
+      slashData: new SlashCommandBuilder()
+        .setName('cat')
+        .setDescription('Get a cute cat photo')
     });
   }
-  async run(message) {
-    const apiKey = message.client.apiKeys.catApi;
+
+  async execute(ctx) {
+    await ctx.defer();
     try {
-      const res = await fetch('https://api.thecatapi.com/v1/images/search', { headers: { 'x-api-key': apiKey }});
-      const img = (await res.json())[0].url;
-      const embed = new MessageEmbed()
-        .setTitle('🐱  Meow!  🐱')
-        .setImage(img)
-        .setFooter(message.member.displayName,  message.author.displayAvatarURL({ dynamic: true }))
-        .setTimestamp()
-        .setColor(message.guild.me.displayHexColor);
-      message.channel.send(embed);
-    } catch (err) {
-      message.client.logger.error(err.stack);
-      this.sendErrorMessage(message, 1, 'Please try again in a few seconds', err.message);
+      const res = await fetch('https://api.thecatapi.com/v1/images/search');
+      const data = await res.json();
+      const imageUrl = data[0]?.url || 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=500';
+
+      const facts = [
+        'Cats sleep for 70% of their lives.',
+        'A group of cats is called a "clowder".',
+        'Cats can jump up to 6 times their height.',
+        'A cat\'s purr has a frequency between 25 and 150 Hertz.',
+        'Cats have 230 bones, while humans only have 206!'
+      ];
+      const fact = facts[Math.floor(Math.random() * facts.length)];
+
+      const embed = new RotiEmbed()
+        .setTitle('🐱 Meow! Here is a Cat!')
+        .setDescription(`💡 **Cat Fact:** ${fact}`)
+        .setImage(imageUrl)
+        .setColor(botConfig.colors.teal);
+
+      return ctx.reply({ embeds: [embed] });
+    } catch (e) {
+      return ctx.sendError('Error', 'Could not fetch a cat image.');
     }
   }
-};
+}
+
+module.exports = CatCommand;

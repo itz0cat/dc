@@ -1,30 +1,31 @@
 {
-  "name": "dc",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "roti-bot",
+  "version": "2.0.0",
+  "description": "R.O.T.I Bot - Complete Community Management, Moderation, Tickets, Giveaways, AutoMod & Fun Discord Bot clone made by itz0cat",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node app.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "discord-bot",
+    "roti-bot",
+    "moderation",
+    "tickets",
+    "giveaways",
+    "automod",
+    "itz0cat"
+  ],
+  "author": "itz0cat",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
-    "ascii-table": "^0.0.9",
+    "@discordjs/voice": "^0.19.2",
     "axios": "^1.19.0",
-    "better-sqlite3": "^13.0.3",
-    "common-tags": "^1.8.2",
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
-    "he": "^1.2.0",
     "moment": "^2.30.1",
     "ms": "^2.1.3",
-    "node-fetch": "^2.7.0",
-    "node-os-utils": "^2.0.4",
-    "node-schedule": "^2.1.1",
-    "winston": "^3.19.0",
-    "yaml": "^2.9.0",
-    "youtube-search": "^1.1.6"
+    "sodium-native": "^5.1.0",
+    "winston": "^3.19.0"
   }
 }

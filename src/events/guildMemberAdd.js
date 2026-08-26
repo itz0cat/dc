@@ -1,108 +1,70 @@
-const { MessageEmbed } = require('discord.js');
-const moment = require('moment');
-const { stripIndent } = require('common-tags');
+const RotiEmbed = require('../utils/embed.js');
+const botConfig = require('../config.js');
 
 module.exports = async (client, member) => {
+  const guild = member.guild;
+  const settings = client.db.getGuild(guild.id);
 
-  client.logger.info(`${member.guild.name}: ${member.user.tag} has joined the server`);
+  // 1. Welcome Message
+  if (settings.welcome_channel_id) {
+    const welcomeChannel = guild.channels.cache.get(settings.welcome_channel_id);
+    if (welcomeChannel) {
+      let welcomeText = (settings.welcome_message || 'Welcome ?member to ?server! We now have ?size members.')
+        .replace(/\?member/g, `<@${member.id}>`)
+        .replace(/\?username/g, member.user.username)
+        .replace(/\?tag/g, member.user.tag)
+        .replace(/\?server/g, guild.name)
+        .replace(/\?size/g, guild.memberCount);
 
-  /** ------------------------------------------------------------------------------------------------
-   * MEMBER LOG
-   * ------------------------------------------------------------------------------------------------ */
-  // Get member log
-  const memberLogId = client.db.settings.selectMemberLogId.pluck().get(member.guild.id);
-  const memberLog = member.guild.channels.cache.get(memberLogId);
-  if (
-    memberLog &&
-    memberLog.viewable &&
-    memberLog.permissionsFor(member.guild.me).has(['SEND_MESSAGES', 'EMBED_LINKS'])
-  ) {
-    const embed = new MessageEmbed()
-      .setTitle('Member Joined')
-      .setAuthor(`${member.guild.name}`, member.guild.iconURL({ dynamic: true }))
-      .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-      .setDescription(`${member} (**${member.user.tag}**)`)
-      .addField('Account created on', moment(member.user.createdAt).format('dddd, MMMM Do YYYY'))
-      .setTimestamp()
-      .setColor(member.guild.me.displayHexColor);
-    memberLog.send(embed);
-  }
+      if (settings.welcome_embed) {
+        const embed = new RotiEmbed()
+          .setTitle(`👋 Welcome to ${guild.name}!`)
+          .setDescription(welcomeText)
+          .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
+          .setColor(botConfig.colors.teal);
+        
+        if (settings.welcome_image) {
+          embed.setImage(settings.welcome_image);
+        }
 
-  /** ------------------------------------------------------------------------------------------------
-   * AUTO ROLE
-   * ------------------------------------------------------------------------------------------------ */ 
-  // Get auto role
-  const autoRoleId = client.db.settings.selectAutoRoleId.pluck().get(member.guild.id);
-  const autoRole = member.guild.roles.cache.get(autoRoleId);
-  if (autoRole) {
-    try {
-      await member.roles.add(autoRole);
-    } catch (err) {
-      client.sendSystemErrorMessage(member.guild, 'auto role', stripIndent`
-        Unable to assign auto role, please check the role hierarchy and ensure I have the Manage Roles permission
-      `, err.message);
-    }
-  }
-
-  /** ------------------------------------------------------------------------------------------------
-   * WELCOME MESSAGES
-   * ------------------------------------------------------------------------------------------------ */ 
-  // Get welcome channel
-  let { welcome_channel_id: welcomeChannelId, welcome_message: welcomeMessage } = 
-    client.db.settings.selectWelcomes.get(member.guild.id);
-  const welcomeChannel = member.guild.channels.cache.get(welcomeChannelId);
-
-  // Send welcome message
-  if (
-    welcomeChannel &&
-    welcomeChannel.viewable &&
-    welcomeChannel.permissionsFor(member.guild.me).has(['SEND_MESSAGES', 'EMBED_LINKS']) &&
-    welcomeMessage
-  ) {
-    welcomeMessage = welcomeMessage
-      .replace(/`?\?member`?/g, member) // Member mention substitution
-      .replace(/`?\?username`?/g, member.user.username) // Username substitution
-      .replace(/`?\?tag`?/g, member.user.tag) // Tag substitution
-      .replace(/`?\?size`?/g, member.guild.members.cache.size); // Guild size substitution
-    welcomeChannel.send(new MessageEmbed().setDescription(welcomeMessage).setColor(member.guild.me.displayHexColor));
-  }
-  
-  /** ------------------------------------------------------------------------------------------------
-   * RANDOM COLOR
-   * ------------------------------------------------------------------------------------------------ */ 
-  // Assign random color
-  const randomColor = client.db.settings.selectRandomColor.pluck().get(member.guild.id);
-  if (randomColor) {
-    const colors = member.guild.roles.cache.filter(c => c.name.startsWith('#')).array();
-
-    // Check length
-    if (colors.length > 0) {
-      const color = colors[Math.floor(Math.random() * colors.length)]; // Get color
-      try {
-        await member.roles.add(color);
-      } catch (err) {
-        client.sendSystemErrorMessage(member.guild, 'random color', stripIndent`
-          Unable to assign random color, please check the role hierarchy and ensure I have the Manage Roles permission
-        `, err.message);
+        welcomeChannel.send({ embeds: [embed] }).catch(() => {});
+      } else {
+        welcomeChannel.send({ content: welcomeText }).catch(() => {});
       }
     }
   }
 
-  /** ------------------------------------------------------------------------------------------------
-   * USERS TABLE
-   * ------------------------------------------------------------------------------------------------ */ 
-  // Update users table
-  client.db.users.insertRow.run(
-    member.id, 
-    member.user.username, 
-    member.user.discriminator,
-    member.guild.id, 
-    member.guild.name,
-    member.joinedAt.toString(),
-    member.user.bot ? 1 : 0
-  );
-  
-  // If member already in users table
-  const missingMemberIds = client.db.users.selectMissingMembers.all(member.guild.id).map(row => row.user_id);
-  if (missingMemberIds.includes(member.id)) client.db.users.updateCurrentMember.run(1, member.id, member.guild.id);
+  // 2. Sticky Roles Reassignment
+  if (settings.sticky_roles_enabled) {
+    const sticky = client.db.prepare('SELECT roles FROM sticky_roles WHERE guild_id = ? AND user_id = ?').get(guild.id, member.id);
+    if (sticky && sticky.roles) {
+      try {
+        const roleIds = JSON.parse(sticky.roles);
+        for (const rId of roleIds) {
+          if (guild.roles.cache.has(rId)) {
+            await member.roles.add(rId, 'Sticky role restored on rejoin').catch(() => {});
+          }
+        }
+      } catch (e) {}
+    }
+  }
+
+  // 3. AutoRole Assignment
+  const autoRoleId = client.db.prepare("SELECT role_id FROM button_roles WHERE guild_id = ? AND type = 'autorole'").pluck().get(guild.id);
+  if (autoRoleId && guild.roles.cache.has(autoRoleId)) {
+    await member.roles.add(autoRoleId, 'AutoRole on join').catch(() => {});
+  }
+
+  // 4. Member Join Log
+  if (settings.log_channel_id) {
+    const logChannel = guild.channels.cache.get(settings.log_channel_id);
+    if (logChannel) {
+      const joinEmbed = new RotiEmbed()
+        .setTitle('📥 Member Joined')
+        .setDescription(`<@${member.id}> (${member.user.tag})\nAccount created: <t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`)
+        .setThumbnail(member.user.displayAvatarURL())
+        .setColor(botConfig.colors.success);
+      logChannel.send({ embeds: [joinEmbed] }).catch(() => {});
+    }
+  }
 };

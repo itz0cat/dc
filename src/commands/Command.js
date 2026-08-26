@@ -1,389 +1,112 @@
-const { MessageEmbed } = require('../utils/shims.js');
-const permissions = require('../utils/permissions.json');
-const { fail } = require('../utils/emojis.json');
 const { PermissionsBitField } = require('discord.js');
+const RotiEmbed = require('../utils/embed.js');
+const botConfig = require('../config.js');
 
-// Map UPPERCASE permission keys to Discord.js PermissionFlagsBits
-const permMap = {
-  'ADMINISTRATOR': PermissionsBitField.Flags.Administrator,
-  'VIEW_AUDIT_LOG': PermissionsBitField.Flags.ViewAuditLog,
-  'VIEW_GUILD_INSIGHTS': PermissionsBitField.Flags.ViewGuildInsights,
-  'MANAGE_GUILD': PermissionsBitField.Flags.ManageGuild,
-  'MANAGE_ROLES': PermissionsBitField.Flags.ManageRoles,
-  'MANAGE_CHANNELS': PermissionsBitField.Flags.ManageChannels,
-  'KICK_MEMBERS': PermissionsBitField.Flags.KickMembers,
-  'BAN_MEMBERS': PermissionsBitField.Flags.BanMembers,
-  'CREATE_INSTANT_INVITE': PermissionsBitField.Flags.CreateInstantInvite,
-  'CHANGE_NICKNAME': PermissionsBitField.Flags.ChangeNickname,
-  'MANAGE_NICKNAMES': PermissionsBitField.Flags.ManageNicknames,
-  'MANAGE_EMOJIS': PermissionsBitField.Flags.ManageGuildExpressions || PermissionsBitField.Flags.ManageEmojisAndStickers,
-  'MANAGE_WEBHOOKS': PermissionsBitField.Flags.ManageWebhooks,
-  'VIEW_CHANNEL': PermissionsBitField.Flags.ViewChannel,
-  'SEND_MESSAGES': PermissionsBitField.Flags.SendMessages,
-  'SEND_TTS_MESSAGES': PermissionsBitField.Flags.SendTTSMessages,
-  'MANAGE_MESSAGES': PermissionsBitField.Flags.ManageMessages,
-  'EMBED_LINKS': PermissionsBitField.Flags.EmbedLinks,
-  'ATTACH_FILES': PermissionsBitField.Flags.AttachFiles,
-  'READ_MESSAGE_HISTORY': PermissionsBitField.Flags.ReadMessageHistory,
-  'MENTION_EVERYONE': PermissionsBitField.Flags.MentionEveryone,
-  'USE_EXTERNAL_EMOJIS': PermissionsBitField.Flags.UseExternalEmojis,
-  'ADD_REACTIONS': PermissionsBitField.Flags.AddReactions,
-  'CONNECT': PermissionsBitField.Flags.Connect,
-  'SPEAK': PermissionsBitField.Flags.Speak,
-  'STREAM': PermissionsBitField.Flags.Stream,
-  'MUTE_MEMBERS': PermissionsBitField.Flags.MuteMembers,
-  'DEAFEN_MEMBERS': PermissionsBitField.Flags.DeafenMembers,
-  'MOVE_MEMBERS': PermissionsBitField.Flags.MoveMembers,
-  'USE_VAD': PermissionsBitField.Flags.UseVAD,
-  'PRIORITY_SPEAKER': PermissionsBitField.Flags.PrioritySpeaker
-};
-
-/**
- * Custom Command class
- */
 class Command {
-
-  /**
-   * Create new command
-   * @param {Client} client 
-   * @param {Object} options 
-   */
-  constructor(client, options) {
-
-    // Validate all options passed
-    this.constructor.validateOptions(client, options);
-
-    /**
-     * The client
-     * @type {Client}
-     */
-    this.client = client;
-
-    /**
-     * Name of the command
-     * @type {string}
-     */
+  constructor(options = {}) {
     this.name = options.name;
-
-    /**
-     * Aliases of the command
-     * @type {Array<string>}
-     */
-    this.aliases = options.aliases || null;
-
-    /**
-     * The arguments for the command
-     * @type {string}
-     */
+    this.description = options.description || 'No description provided';
+    this.category = options.category || 'Utility';
+    this.aliases = options.aliases || [];
     this.usage = options.usage || options.name;
-
-    /**
-     * The description for the command
-     * @type {string}
-     */
-    this.description = options.description || '';
-
-    /**
-     * The type of command
-     * @type {string}
-     */
-    this.type = options.type || client.types.MISC;
-
-    /**
-     * The client permissions needed
-     * @type {Array<string>}
-     */
-    this.clientPermissions = options.clientPermissions || ['SEND_MESSAGES', 'EMBED_LINKS'];
-
-    /**
-     * The user permissions needed
-     * @type {Array<string>}
-     */
-    this.userPermissions = options.userPermissions || null;
-
-    /**
-     * Examples of how the command is used
-     * @type {Array<string>}
-     */
-    this.examples = options.examples || null;
-    
-    /**
-     * If command can only be used by owner
-     * @type {boolean}
-     */
+    this.userPermissions = options.userPermissions || [];
+    this.botPermissions = options.botPermissions || [
+      PermissionsBitField.Flags.SendMessages,
+      PermissionsBitField.Flags.EmbedLinks
+    ];
     this.ownerOnly = options.ownerOnly || false;
-
-    /**
-     * If command is enabled
-     * @type {boolean}
-     */
-    this.disabled = options.disabled || false;
-
-    /**
-     * Array of error types
-     * @type {Array<string>}
-     */
-    this.errorTypes = ['Invalid Argument', 'Command Failure'];
+    this.guildOnly = options.guildOnly !== undefined ? options.guildOnly : true;
+    this.slashData = options.slashData || null; // SlashCommandBuilder instance or JSON
   }
 
-  /**
-   * Runs the command
-   * @param {Message} message 
-   * @param {string[]} args 
-   */
-  // eslint-disable-next-line no-unused-vars
-  run(message, args) {
-    throw new Error(`The ${this.name} command has no run() method`);
-  }
+  // Unified context creation for Slash & Prefix
+  createContext(interactionOrMessage, args = []) {
+    const isSlash = Boolean(interactionOrMessage.isChatInputCommand);
+    const client = interactionOrMessage.client;
+    const guild = interactionOrMessage.guild;
+    const channel = interactionOrMessage.channel;
+    const member = interactionOrMessage.member;
+    const user = isSlash ? interactionOrMessage.user : interactionOrMessage.author;
 
-  /**
-   * Gets member from mention
-   * @param {Message} message 
-   * @param {string} mention 
-   */
-  getMemberFromMention(message, mention) {
-    if (!mention) return;
-    const matches = mention.match(/^<@!?(\d+)>$/);
-    if (!matches) {
-      // Allow searching by ID or username
-      return message.guild.members.cache.get(mention) ||
-        message.guild.members.cache.find(m => m.user.username.toLowerCase() === mention.toLowerCase() || m.displayName.toLowerCase() === mention.toLowerCase());
-    }
-    const id = matches[1];
-    return message.guild.members.cache.get(id);
-  }
-
-  /**
-   * Gets role from mention
-   * @param {Message} message 
-   * @param {string} mention 
-   */
-  getRoleFromMention(message, mention) {
-    if (!mention) return;
-    const matches = mention.match(/^<@&(\d+)>$/);
-    if (!matches) {
-      return message.guild.roles.cache.get(mention) ||
-        message.guild.roles.cache.find(r => r.name.toLowerCase() === mention.toLowerCase());
-    }
-    const id = matches[1];
-    return message.guild.roles.cache.get(id);
-  }
-
-  /**
-   * Gets text channel from mention
-   * @param {Message} message 
-   * @param {string} mention 
-   */
-  getChannelFromMention(message, mention) {
-    if (!mention) return;
-    const matches = mention.match(/^<#(\d+)>$/);
-    if (!matches) {
-      return message.guild.channels.cache.get(mention) ||
-        message.guild.channels.cache.find(c => c.name.toLowerCase() === mention.toLowerCase());
-    }
-    const id = matches[1];
-    return message.guild.channels.cache.get(id);
-  }
-
-  /**
-   * Helper method to check permissions
-   * @param {Message} message 
-   * @param {boolean} ownerOverride 
-   */
-  checkPermissions(message, ownerOverride = true) {
-    const me = message.guild.members.me;
-    if (!me || !message.channel.permissionsFor(me).has([PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.EmbedLinks])) return false;
-    const clientPermission = this.checkClientPermissions(message);
-    const userPermission = this.checkUserPermissions(message, ownerOverride);
-    if (clientPermission && userPermission) return true;
-    else return false;
-  }
-
-  /**
-   * Checks the user permissions
-   * @param {Message} message 
-   * @param {boolean} ownerOverride 
-   */
-  checkUserPermissions(message, ownerOverride = true) {
-    if (!this.ownerOnly && !this.userPermissions) return true;
-    if (ownerOverride && this.client.isOwner(message.author)) return true;
-    if (this.ownerOnly && !this.client.isOwner(message.author)) {
-      return false;
-    }
-    
-    if (message.member.permissions && message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return true;
-    if (this.userPermissions) {
-      const channelPerms = message.channel.permissionsFor(message.author);
-      const missing = [];
-      for (const perm of this.userPermissions) {
-        const flag = permMap[perm] || perm;
-        if (!channelPerms || !channelPerms.has(flag)) {
-          missing.push(permissions[perm] || perm);
-        }
-      }
-      if (missing.length !== 0) {
-        const embed = new MessageEmbed()
-          .setAuthor(message.author.tag, message.author.displayAvatarURL({ forceStatic: false }))
-          .setTitle(`${fail} Missing User Permissions: \`${this.name}\``)
-          .setDescription(`\`\`\`diff\n${missing.map(p => `- ${p}`).join('\n')}\`\`\``)
-          .setTimestamp()
-          .setColor(message.guild.members.me ? message.guild.members.me.displayHexColor : '#7289da');
-        message.channel.send({ embeds: [embed] }).catch(() => {});
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Checks the client permissions
-   * @param {Message} message 
-   */
-  checkClientPermissions(message) {
-    const me = message.guild.members.me;
-    const channelPerms = message.channel.permissionsFor(me);
-    const missing = [];
-    for (const perm of this.clientPermissions) {
-      const flag = permMap[perm] || perm;
-      if (!channelPerms || !channelPerms.has(flag)) {
-        missing.push(permissions[perm] || perm);
-      }
-    }
-    if (missing.length !== 0) {
-      const embed = new MessageEmbed()
-        .setAuthor(this.client.user.tag, this.client.user.displayAvatarURL({ forceStatic: false }))
-        .setTitle(`${fail} Missing Bot Permissions: \`${this.name}\``)
-        .setDescription(`\`\`\`diff\n${missing.map(p => `- ${p}`).join('\n')}\`\`\``)
-        .setTimestamp()
-        .setColor(me ? me.displayHexColor : '#7289da');
-      message.channel.send({ embeds: [embed] }).catch(() => {});
-      return false;
-    } else return true;
-  }
-  
-  /**
-   * Creates and sends command failure embed
-   * @param {Message} message
-   * @param {int} errorType
-   * @param {string} reason 
-   * @param {string} errorMessage 
-   */
-  sendErrorMessage(message, errorType, reason, errorMessage = null) {
-    errorType = this.errorTypes[errorType] || 'Error';
-    const prefix = message.client.db.settings.selectPrefix.pluck().get(message.guild.id) || 'c!';
-    const me = message.guild.members.me;
-    const embed = new MessageEmbed()
-      .setAuthor(message.author.tag, message.author.displayAvatarURL({ forceStatic: false }))
-      .setTitle(`${fail} Error: \`${this.name}\``)
-      .setDescription(`\`\`\`diff\n- ${errorType}\n+ ${reason}\`\`\``)
-      .addField('Usage', `\`${prefix}${this.usage}\``)
-      .setTimestamp()
-      .setColor(me ? me.displayHexColor : '#7289da');
-    if (this.examples) embed.addField('Examples', this.examples.map(e => `\`${prefix}${e}\``).join('\n'));
-    if (errorMessage) embed.addField('Error Message', `\`\`\`${errorMessage}\`\`\``);
-    message.channel.send({ embeds: [embed] }).catch(() => {});
-  }
-
-  /**
-   * Creates and sends mod log embed
-   * @param {Message} message
-   * @param {string} reason 
-   * @param {Object} fields
-   */
-  async sendModLogMessage(message, reason, fields = {}) {
-    const modLogId = message.client.db.settings.selectModLogId.pluck().get(message.guild.id);
-    const modLog = message.guild.channels.cache.get(modLogId);
-    const me = message.guild.members.me;
-    if (
-      modLog && 
-      modLog.viewable &&
-      modLog.permissionsFor(me).has([PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.EmbedLinks])
-    ) {
-      const caseNumber = await message.client.utils.getCaseNumber(message.client, message.guild, modLog);
-      const embed = new MessageEmbed()
-        .setTitle(`Action: \`${message.client.utils.capitalize(this.name)}\``)
-        .addField('Moderator', `${message.member}`, true)
-        .setFooter(`Case #${caseNumber}`)
-        .setTimestamp()
-        .setColor(me ? me.displayHexColor : '#7289da');
-      for (const field in fields) {
-        embed.addField(field, String(fields[field]), true);
-      }
-      embed.addField('Reason', reason || 'No reason provided');
-      modLog.send({ embeds: [embed] }).catch(err => message.client.logger.error(err.stack));
-    }
-  }
-
-  /**
-   * Validates all options provided
-   * @param {Client} client 
-   * @param {Object} options 
-   */
-  static validateOptions(client, options) {
-
-    if (!client) throw new Error('No client was found');
-    if (typeof options !== 'object') throw new TypeError('Command options is not an Object');
-
-    // Name
-    if (typeof options.name !== 'string') throw new TypeError('Command name is not a string');
-    if (options.name !== options.name.toLowerCase()) throw new Error('Command name is not lowercase');
-
-    // Aliases
-    if (options.aliases) {
-      if (!Array.isArray(options.aliases) || options.aliases.some(ali => typeof ali !== 'string'))
-        throw new TypeError('Command aliases is not an Array of strings');
-
-      if (options.aliases.some(ali => ali !== ali.toLowerCase()))
-        throw new RangeError('Command aliases are not lowercase');
-
-      for (const alias of options.aliases) {
-        if (client.aliases.get(alias)) throw new Error('Command alias already exists');
-      }
-    }
-
-    // Usage
-    if (options.usage && typeof options.usage !== 'string') throw new TypeError('Command usage is not a string');
-
-    // Description
-    if (options.description && typeof options.description !== 'string') 
-      throw new TypeError('Command description is not a string');
-    
-    // Type
-    if (options.type && typeof options.type !== 'string') throw new TypeError('Command type is not a string');
-    if (options.type && !Object.values(client.types).includes(options.type))
-      throw new Error('Command type is not valid');
-    
-    // Client permissions
-    if (options.clientPermissions) {
-      if (!Array.isArray(options.clientPermissions))
-        throw new TypeError('Command clientPermissions is not an Array of permission key strings');
+    return {
+      isSlash,
+      raw: interactionOrMessage,
+      client,
+      guild,
+      channel,
+      member,
+      user,
+      args,
       
-      for (const perm of options.clientPermissions) {
-        if (!permissions[perm]) throw new RangeError(`Invalid command clientPermission: ${perm}`);
+      // Unified reply method
+      reply: async (options) => {
+        let payload = typeof options === 'string' ? { content: options } : options;
+        if (payload instanceof RotiEmbed || payload.data) {
+          payload = { embeds: [payload] };
+        }
+
+        if (isSlash) {
+          if (interactionOrMessage.deferred || interactionOrMessage.replied) {
+            return interactionOrMessage.editReply(payload);
+          }
+          return interactionOrMessage.reply(payload);
+        } else {
+          return channel.send(payload);
+        }
+      },
+
+      // Unified ephemeral reply
+      replyEphemeral: async (options) => {
+        let payload = typeof options === 'string' ? { content: options } : options;
+        if (payload instanceof RotiEmbed || payload.data) {
+          payload = { embeds: [payload] };
+        }
+
+        if (isSlash) {
+          if (interactionOrMessage.deferred || interactionOrMessage.replied) {
+            return interactionOrMessage.editReply(payload);
+          }
+          return interactionOrMessage.reply({ ...payload, ephemeral: true });
+        } else {
+          return channel.send(payload);
+        }
+      },
+
+      // Unified defer reply
+      defer: async (ephemeral = false) => {
+        if (isSlash) {
+          if (!interactionOrMessage.deferred && !interactionOrMessage.replied) {
+            return interactionOrMessage.deferReply({ ephemeral });
+          }
+        } else {
+          await channel.sendTyping().catch(() => {});
+        }
+      },
+
+      // Embed response helpers
+      sendSuccess: (title, description) => {
+        return (isSlash && (interactionOrMessage.deferred || interactionOrMessage.replied))
+          ? interactionOrMessage.editReply({ embeds: [RotiEmbed.success(title, description)] })
+          : (isSlash ? interactionOrMessage.reply({ embeds: [RotiEmbed.success(title, description)] }) : channel.send({ embeds: [RotiEmbed.success(title, description)] }));
+      },
+
+      sendError: (title, description) => {
+        return (isSlash && (interactionOrMessage.deferred || interactionOrMessage.replied))
+          ? interactionOrMessage.editReply({ embeds: [RotiEmbed.error(title, description)] })
+          : (isSlash ? interactionOrMessage.reply({ embeds: [RotiEmbed.error(title, description)] }) : channel.send({ embeds: [RotiEmbed.error(title, description)] }));
+      },
+
+      sendWarning: (title, description) => {
+        return (isSlash && (interactionOrMessage.deferred || interactionOrMessage.replied))
+          ? interactionOrMessage.editReply({ embeds: [RotiEmbed.warning(title, description)] })
+          : (isSlash ? interactionOrMessage.reply({ embeds: [RotiEmbed.warning(title, description)] }) : channel.send({ embeds: [RotiEmbed.warning(title, description)] }));
       }
-    }
+    };
+  }
 
-    // User permissions
-    if (options.userPermissions) {
-      if (!Array.isArray(options.userPermissions))
-        throw new TypeError('Command userPermissions is not an Array of permission key strings');
-
-      for (const perm of options.userPermissions) {
-        if (!permissions[perm]) throw new RangeError(`Invalid command userPermission: ${perm}`);
-      }
-    }
-
-    // Examples
-    if (options.examples && !Array.isArray(options.examples))
-      throw new TypeError('Command examples is not an Array of permission key strings');
-
-    // Owner only
-    if (options.ownerOnly && typeof options.ownerOnly !== 'boolean') 
-      throw new TypeError('Command ownerOnly is not a boolean');
-
-    // Disabled
-    if (options.disabled && typeof options.disabled !== 'boolean') 
-      throw new TypeError('Command disabled is not a boolean');
+  // To be implemented by commands
+  async execute(ctx) {
+    throw new Error(`Command ${this.name} has no execute implementation`);
   }
 }
 

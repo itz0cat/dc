@@ -2,57 +2,44 @@ const { createLogger, format, transports } = require('winston');
 const path = require('path');
 const fs = require('fs');
 
-const logsDir = path.join(__basedir, 'logs');
+const logsDir = path.join(__dirname, '../../logs');
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
-// Custom log formatting
-const logFormat = format.printf((info) => {
-  const { timestamp, level, label, message, ...rest } = info;
-  let log = `${timestamp} - ${level} [${label}]: ${message}`;
-
-  // Check if rest is an object
-  if (!( Object.keys(rest).length === 0 && rest.constructor === Object )) {
-    log = `${log}\n${JSON.stringify(rest, null, 2)}`.replace(/\\n/g, '\n');
+const logFormat = format.printf(({ timestamp, level, message, stack, ...meta }) => {
+  let log = `[${timestamp}] [${level.toUpperCase()}]: ${stack || message}`;
+  if (Object.keys(meta).length > 0) {
+    log += ` ${JSON.stringify(meta)}`;
   }
   return log;
 });
 
-const appName = process.mainModule ? path.basename(process.mainModule.filename) : 'app.js';
-
-/**
- * Create a new logger
- * @type {Logger}
- */
 const logger = createLogger({
   level: 'debug',
   format: format.combine(
+    format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     format.errors({ stack: true }),
-    format.label({ label: appName }),
-    format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' })
+    logFormat
   ),
-  transports: [ 
-    // Logging to console
-    new transports.Console({ 
+  transports: [
+    new transports.Console({
       format: format.combine(
         format.colorize(),
         logFormat
       )
     }),
-    // Logging info and up to file
-    new transports.File({ 
-      filename: path.join(__basedir, 'logs/full.log'), 
+    new transports.File({
+      filename: path.join(logsDir, 'bot.log'),
       level: 'info',
-      format: logFormat,
-      options: { flags: 'a' } 
+      maxsize: 5242880, // 5MB
+      maxFiles: 5
     }),
-    // Logging only warns and errors to file
-    new transports.File({ 
-      filename: path.join(__basedir, 'logs/error.log'),
+    new transports.File({
+      filename: path.join(logsDir, 'error.log'),
       level: 'warn',
-      format: logFormat,
-      options: { flags: 'a' }
+      maxsize: 5242880,
+      maxFiles: 5
     })
   ]
 });

@@ -1,100 +1,64 @@
-const { MessageEmbed } = require('discord.js');
-const { verify } = require('../utils/emojis.json');
-const { stripIndent } = require('common-tags');
+const RotiEmbed = require('../utils/embed.js');
+const botConfig = require('../config.js');
 
-module.exports = async (client, messageReaction, user) => {
+module.exports = async (client, reaction, user) => {
+  if (user.bot) return;
 
-  if (client.user === user) return;
+  // Fetch partials if needed
+  if (reaction.partial) {
+    try {
+      await reaction.fetch();
+    } catch (e) {
+      return;
+    }
+  }
 
-  const { message, emoji } = messageReaction;
+  const message = reaction.message;
+  if (!message.guild) return;
 
-  // Verification
-  if (emoji.id === verify.split(':')[2].slice(0, -1)) {
-    const { verification_role_id: verificationRoleId, verification_message_id: verificationMessageId } = 
-    client.db.settings.selectVerification.get(message.guild.id);
-    const verificationRole = message.guild.roles.cache.get(verificationRoleId);
+  const guildId = message.guild.id;
+  const settings = client.db.getGuild(guildId);
 
-    if (!verificationRole || message.id != verificationMessageId) return;
+  // 1. Starboard
+  if (reaction.emoji.name === '⭐' && settings.starboard_enabled && settings.starboard_channel_id) {
+    const ignored = (settings.starboard_ignored_channels || '').split(',').filter(Boolean);
+    if (!ignored.includes(message.channel.id)) {
+      const starChannel = message.guild.channels.cache.get(settings.starboard_channel_id);
+      const count = reaction.count;
+      const threshold = settings.starboard_threshold || 3;
 
-    const member = message.guild.members.cache.get(user.id);
-    if (!member.roles.cache.has(verificationRole)) {
-      try {
-        await member.roles.add(verificationRole);
-      } catch (err) {
-        return client.sendSystemErrorMessage(member.guild, 'verification', 
-          stripIndent`Unable to assign verification role,` +
-          'please check the role hierarchy and ensure I have the Manage Roles permission'
-          , err.message);
+      if (starChannel && count >= threshold) {
+        const starEmbed = new RotiEmbed()
+          .setAuthor({ name: message.author.tag, iconURL: message.author.displayAvatarURL() })
+          .setDescription(message.content || '[No text]')
+          .addFields({ name: 'Original', value: `[Jump to Message](${message.url})` })
+          .setColor(0xF1C40F);
+
+        if (message.attachments.size > 0) {
+          starEmbed.setImage(message.attachments.first().proxyURL);
+        }
+
+        // Check if already posted in starboard
+        const existingMessages = await starChannel.messages.fetch({ limit: 50 }).catch(() => null);
+        const existing = existingMessages?.find(m => m.embeds[0]?.fields?.some(f => f.value.includes(message.id)));
+
+        if (existing) {
+          existing.edit({ content: `⭐ **${count}** <#${message.channel.id}>`, embeds: [starEmbed] }).catch(() => {});
+        } else {
+          starChannel.send({ content: `⭐ **${count}** <#${message.channel.id}>`, embeds: [starEmbed] }).catch(() => {});
+        }
       }
     }
   }
 
-  // Starboard
-  if (emoji.name === '⭐' && message.author != user) {
-    const starboardChannelId = client.db.settings.selectStarboardChannelId.pluck().get(message.guild.id);
-    const starboardChannel = message.guild.channels.cache.get(starboardChannelId);
-    if (
-      !starboardChannel || 
-      !starboardChannel.viewable ||
-      !starboardChannel.permissionsFor(message.guild.me).has(['SEND_MESSAGES', 'EMBED_LINKS']) ||
-      message.channel === starboardChannel
-    ) return;
-
-    const emojis = ['⭐', '🌟', '✨', '💫', '☄️'];
-    const messages = await starboardChannel.messages.fetch({ limit: 100 });
-    const starred = messages.find(m => {
-      return emojis.some(e => {
-        return m.content.startsWith(e) &&
-          m.embeds[0] &&
-          m.embeds[0].footer &&
-          m.embeds[0].footer.text == message.id;
-      });
-    });
-
-    // If message already in starboard
-    if (starred) {
-      const starCount = parseInt(starred.content.split(' ')[1].slice(2)) + 1;
-
-      // Determine emoji type
-      let emojiType;
-      if (starCount > 20) emojiType = emojis[4];
-      else if (starCount > 15) emojiType = emojis[3];
-      else if (starCount > 10) emojiType = emojis[2];
-      else if (starCount > 5) emojiType = emojis[1];
-      else emojiType = emojis[0];
-
-      const starMessage = await starboardChannel.messages.fetch(starred.id);
-      await starMessage.edit(`${emojiType} **${starCount}  |**  ${message.channel}`)
-        .catch(err => client.logger.error(err.stack));
-
-    // New starred message
-    } else {
-
-      // Check for attachment image
-      let image = '';
-      const attachment = message.attachments.array()[0];
-      if (attachment && attachment.url) {
-        const extension = attachment.url.split('.').pop();
-        if (/(jpg|jpeg|png|gif)/gi.test(extension)) image = attachment.url;
-      }
-
-      // Check for url
-      if (!image && message.embeds[0] && message.embeds[0].url) {
-        const extension = message.embeds[0].url.split('.').pop();
-        if (/(jpg|jpeg|png|gif)/gi.test(extension)) image = message.embeds[0].url;
-      }
-      
-      if (!message.content && !image) return;
-
-      const embed = new MessageEmbed()
-        .setAuthor(message.author.tag, message.author.displayAvatarURL({ dynamic: true}))
-        .setDescription(message.content)
-        .addField('Original', `[Jump!](${message.url})`)
-        .setImage(image)
-        .setTimestamp()
-        .setFooter(message.id)
-        .setColor('#ffac33');
-      await starboardChannel.send(`⭐ **1  |**  ${message.channel}`, embed);
+  // 2. Reaction Roles
+  const rr = client.db.prepare('SELECT role_id FROM button_roles WHERE guild_id = ? AND message_id = ? AND emoji = ?')
+    .pluck().get(guildId, message.id, reaction.emoji.name);
+  
+  if (rr) {
+    const member = await message.guild.members.fetch(user.id).catch(() => null);
+    if (member && !member.roles.cache.has(rr)) {
+      await member.roles.add(rr, 'Reaction role').catch(() => {});
     }
   }
 };

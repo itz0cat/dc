@@ -1,59 +1,27 @@
-const { MessageEmbed } = require('discord.js');
+const RotiEmbed = require('../utils/embed.js');
+const botConfig = require('../config.js');
 
-module.exports = (client, message) => {
-  
-  // Check for webhook and that message is not empty
-  if (message.webhookID || (!message.content && message.embeds.length === 0)) return;
-  
-  const embed = new MessageEmbed()
-    .setTitle('Message Update: `Delete`')
-    .setAuthor(`${message.author.tag}`, message.author.displayAvatarURL({ dynamic: true }))
-    .setTimestamp()
-    .setColor(message.guild.me.displayHexColor);
-  
-  // Message delete
-  if (message.content) {
+module.exports = async (client, message) => {
+  if (!message.guild || message.author?.bot) return;
 
-    // Dont send logs for starboard delete
-    const starboardChannelId = client.db.settings.selectStarboardChannelId.pluck().get(message.guild.id);
-    const starboardChannel = message.guild.channels.cache.get(starboardChannelId);
-    if (message.channel == starboardChannel) return;
+  // 1. Snipe Cache
+  client.snipes.set(message.channel.id, {
+    content: message.content || '[No text content]',
+    author: message.author,
+    image: message.attachments.first() ? message.attachments.first().proxyURL : null,
+    timestamp: Date.now()
+  });
 
-    // Get message delete log
-    const messageDeleteLogId = client.db.settings.selectMessageDeleteLogId.pluck().get(message.guild.id);
-    const messageDeleteLog = message.guild.channels.cache.get(messageDeleteLogId);
-    if (
-      messageDeleteLog &&
-      messageDeleteLog.viewable &&
-      messageDeleteLog.permissionsFor(message.guild.me).has(['SEND_MESSAGES', 'EMBED_LINKS'])
-    ) {
-
-      if (message.content.length > 1024) message.content = message.content.slice(0, 1021) + '...';
-
-      embed
-        .setDescription(`${message.member}'s **message** in ${message.channel} was deleted.`)
-        .addField('Message', message.content);
-        
-      messageDeleteLog.send(embed);
-    }
-
-  // Embed delete
-  } else { 
-
-    // Get message delete log
-    const messageDeleteLogId = client.db.settings.selectMessageDeleteLogId.pluck().get(message.guild.id);
-    const messageDeleteLog = message.guild.channels.cache.get(messageDeleteLogId);
-    if (
-      messageDeleteLog &&
-      messageDeleteLog.viewable &&
-      messageDeleteLog.permissionsFor(message.guild.me).has(['SEND_MESSAGES', 'EMBED_LINKS'])
-    ) {
-
-      embed
-        .setTitle('Message Update: `Delete`')
-        .setDescription(`${message.member}'s **message embed** in ${message.channel} was deleted.`);
-      messageDeleteLog.send(embed);
+  // 2. Logging
+  const settings = client.db.getGuild(message.guild.id);
+  if (settings.log_channel_id) {
+    const logChannel = message.guild.channels.cache.get(settings.log_channel_id);
+    if (logChannel) {
+      const delEmbed = new RotiEmbed()
+        .setTitle('🗑️ Message Deleted')
+        .setDescription(`**Author:** <@${message.author?.id}> (${message.author?.tag})\n**Channel:** <#${message.channel.id}>\n\n**Content:**\n${message.content ? message.content.slice(0, 1000) : '*No text content*'}`)
+        .setColor(botConfig.colors.error);
+      logChannel.send({ embeds: [delEmbed] }).catch(() => {});
     }
   }
-  
 };

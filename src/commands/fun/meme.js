@@ -1,30 +1,43 @@
+const { SlashCommandBuilder } = require('discord.js');
 const Command = require('../Command.js');
-const { MessageEmbed } = require('discord.js');
-const fetch = require('node-fetch');
+const RotiEmbed = require('../../utils/embed.js');
+const botConfig = require('../../config.js');
 
-module.exports = class MemeCommand extends Command {
-  constructor(client) {
-    super(client, {
+class MemeCommand extends Command {
+  constructor() {
+    super({
       name: 'meme',
+      description: 'Fetch and display a random meme from Reddit',
+      category: 'Fun',
+      aliases: ['memes'],
       usage: 'meme',
-      description: 'Displays a random meme from the `memes`, `dankmemes`, or `me_irl` subreddits.',
-      type: client.types.FUN
+      slashData: new SlashCommandBuilder()
+        .setName('meme')
+        .setDescription('Get a random meme')
     });
   }
-  async run(message) {
+
+  async execute(ctx) {
+    await ctx.defer();
     try {
-      let res = await fetch('https://meme-api.herokuapp.com/gimme');
-      res = await res.json();
-      const embed = new MessageEmbed()
-        .setTitle(res.title)
-        .setImage(res.url)
-        .setFooter(message.member.displayName,  message.author.displayAvatarURL({ dynamic: true }))
-        .setTimestamp()
-        .setColor(message.guild.me.displayHexColor);
-      message.channel.send(embed);
+      const response = await fetch('https://meme-api.com/gimme/memes');
+      const data = await response.json();
+
+      if (!data || !data.url) {
+        return ctx.sendError('Error', 'Could not fetch a meme at this moment. Please try again!');
+      }
+
+      const embed = new RotiEmbed()
+        .setTitle(data.title || 'Random Meme')
+        .setImage(data.url)
+        .setFooter({ text: `👍 ${data.ups || 0} upvotes • r/${data.subreddit} • ${botConfig.footerText}` })
+        .setColor(botConfig.colors.teal);
+
+      return ctx.reply({ embeds: [embed] });
     } catch (err) {
-      message.client.logger.error(err.stack);
-      this.sendErrorMessage(message, 1, 'Please try again in a few seconds', err.message);
+      return ctx.sendError('Fetch Failed', 'Unable to retrieve meme from Reddit.');
     }
   }
-};
+}
+
+module.exports = MemeCommand;

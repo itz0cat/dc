@@ -1,27 +1,5 @@
-# Node
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Sensitive config & Environment
-config.json
-.env
-*.env
-
-# Logs
+data/*.sqlite*
 logs/
-*.log
-
-# Database
-data/db.sqlite
-data/db.sqlite-journal
-data/db.sqlite-wal
-data/db.sqlite-shm
-*.sqlite
-*.sqlite-wal
-*.sqlite-shm
-
-# OS files
+.env
 .DS_Store
-Thumbs.db
