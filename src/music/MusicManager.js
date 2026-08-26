@@ -20,31 +20,47 @@ class MusicManager {
     return this.queues.get(guildId);
   }
 
-  createQueue(guildId, textChannel, voiceChannel) {
-    let connection = null;
-    let player = null;
-
-    if (djsVoice && djsVoice.joinVoiceChannel) {
-      try {
-        connection = djsVoice.joinVoiceChannel({
-          channelId: voiceChannel.id,
-          guildId: guildId,
-          adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-          selfDeaf: true
+  joinVoice(guild, channelId) {
+    try {
+      if (guild && guild.shard) {
+        guild.shard.send({
+          op: 4,
+          d: {
+            guild_id: guild.id,
+            channel_id: channelId,
+            self_mute: false,
+            self_deaf: true
+          }
         });
-        player = djsVoice.createAudioPlayer();
-        connection.subscribe(player);
-      } catch (e) {
-        this.client.logger.warn(`Voice connection skipped (PRoot sandbox): ${e.message}`);
       }
+    } catch (e) {
+      this.client.logger.warn(`Failed to send Voice State Update: ${e.message}`);
     }
+  }
+
+  leaveVoice(guild) {
+    try {
+      if (guild && guild.shard) {
+        guild.shard.send({
+          op: 4,
+          d: {
+            guild_id: guild.id,
+            channel_id: null,
+            self_mute: false,
+            self_deaf: false
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  createQueue(guildId, textChannel, voiceChannel) {
+    this.joinVoice(voiceChannel.guild, voiceChannel.id);
 
     const queue = {
       guildId,
       textChannel,
       voiceChannel,
-      connection,
-      player,
       songs: [],
       current: null,
       volume: 80,
@@ -64,10 +80,12 @@ class MusicManager {
     const queue = this.queues.get(guildId);
     if (!queue) return;
     if (queue.timer) clearTimeout(queue.timer);
-    try {
-      if (queue.player && queue.player.stop) queue.player.stop();
-      if (queue.connection && queue.connection.destroy) queue.connection.destroy();
-    } catch (e) {}
+    
+    const guild = this.client.guilds.cache.get(guildId);
+    if (guild) {
+      this.leaveVoice(guild);
+    }
+
     this.queues.delete(guildId);
   }
 

@@ -21,12 +21,14 @@ class JoinCommand extends Command {
     const voiceChannel = ctx.member.voice.channel;
     if (!voiceChannel) return ctx.sendError('Voice Channel Required', 'You must be in a voice channel for me to join.');
 
+    ctx.client.music.joinVoice(ctx.guild, voiceChannel.id);
+
     let queue = ctx.client.music.getQueue(ctx.guild.id);
     if (!queue) {
       queue = ctx.client.music.createQueue(ctx.guild.id, ctx.channel, voiceChannel);
     }
 
-    return ctx.sendSuccess('Voice Connected', `🔊 Connected to <#${voiceChannel.id}>!`);
+    return ctx.sendSuccess('Voice Connected', `🔊 Connected to **${voiceChannel.name}** (<#${voiceChannel.id}>)!`);
   }
 }
 
