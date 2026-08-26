@@ -52,6 +52,9 @@ class RotiClient extends DiscordClient {
     
     const MusicManager = require('./music/MusicManager.js');
     this.music = new MusicManager(this);
+
+    const InviteTracker = require('./handlers/inviteTracker.js');
+    this.inviteTracker = new InviteTracker(this);
   }
 
   loadCommands(dir = path.join(__dirname, 'commands')) {

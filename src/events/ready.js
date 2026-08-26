@@ -18,6 +18,9 @@ module.exports = async (client) => {
   startTemproleLoop(client);
   startReminderLoop(client);
 
+  // Initialize Falcon Invite Tracker
+  await client.inviteTracker.init();
+
   // Rotating Status
   const activities = [
     { name: `?help | /help`, type: ActivityType.Playing },

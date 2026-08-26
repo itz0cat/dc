@@ -10,6 +10,28 @@ module.exports = async (client, message) => {
   const channelId = message.channel.id;
   const authorId = message.author.id;
 
+  // 0. Falcon Message Tracking
+  try {
+    client.db.prepare(`
+      INSERT INTO message_stats (guild_id, user_id, daily_count, weekly_count, total_count, last_message)
+      VALUES (?, ?, 1, 1, 1, ?)
+      ON CONFLICT(guild_id, user_id) DO UPDATE SET
+        daily_count = daily_count + 1,
+        weekly_count = weekly_count + 1,
+        total_count = total_count + 1,
+        last_message = ?
+    `).run(guildId, authorId, Date.now(), Date.now());
+
+    // Check message role rewards
+    const msgStats = client.db.prepare('SELECT total_count FROM message_stats WHERE guild_id = ? AND user_id = ?').get(guildId, authorId);
+    if (msgStats) {
+      const rew = client.db.prepare('SELECT role_id FROM message_roles WHERE guild_id = ? AND messages_needed <= ? ORDER BY messages_needed DESC LIMIT 1').get(guildId, msgStats.total_count);
+      if (rew && rew.role_id && message.guild.roles.cache.has(rew.role_id) && !message.member.roles.cache.has(rew.role_id)) {
+        await message.member.roles.add(rew.role_id, 'Message activity role milestone').catch(() => {});
+      }
+    }
+  } catch (e) {}
+
   // 1. AFK Return Check
   const afkEntry = client.db.prepare('SELECT * FROM afk WHERE guild_id = ? AND user_id = ?').get(guildId, authorId);
   if (afkEntry) {

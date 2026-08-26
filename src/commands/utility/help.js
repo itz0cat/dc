@@ -27,10 +27,13 @@ class HelpCommand extends Command {
 
   getCategoryEmbed(categoryKey, client, prefix) {
     const categoriesMap = {
+      tracking: { name: 'Falcon Tracking & Growth', icon: '📊', desc: 'Invite tracking, message counts, voice activity & automated milestone role rewards' },
+      voice: { name: 'VoiceMaster (Temp Voice)', icon: '🔊', desc: 'Join-to-Create custom temporary voice channels with lock, limit, permit and claim' },
+      security: { name: 'Anti-Nuke & Security', icon: '🛡️', desc: 'Server raid defense, anti-bot add, mass ban/kick blocks and admin whitelisting' },
       music: { name: 'Music', icon: '🎵', desc: 'High-quality music streaming, queue, audio effects and lyrics' },
-      server: { name: 'Server Management', icon: '🛠️', desc: 'Welcome cards, ticket system, suggestions, starboard, logging & tags' },
-      moderation: { name: 'Moderation', icon: '🛡️', desc: 'Bans, softbans, timeouts, warnings, cases, locks, purges & modlogs' },
-      roles: { name: 'Role Administration', icon: '🎭', desc: 'Button self-roles, dropdown select roles, reaction roles & temproles' },
+      server: { name: 'Server Management', icon: '🛠️', desc: 'Welcome cards, ticket system, suggestions, starboard, logging & verification' },
+      moderation: { name: 'Moderation', icon: '🔨', desc: 'Bans, softbans, timeouts, warnings, cases, locks, purges & modlogs' },
+      roles: { name: 'Role Administration', icon: '🎭', desc: 'Button self-roles, dropdown select roles, vanity status roles & temproles' },
       automod: { name: 'AutoMod', icon: '🤖', desc: 'Anti-invite links, anti-external links, anti-spam, caps filter & blacklist words' },
       giveaway: { name: 'Giveaways', icon: '🎉', desc: 'Interactive timed giveaways, quick reaction drops, rerolls & winner picking' },
       highlight: { name: 'Highlights', icon: '🔔', desc: 'Custom keyword direct message mention notifications' },
@@ -65,11 +68,15 @@ class HelpCommand extends Command {
         `Welcome to **${botConfig.name}**! The premier all-in-one Discord bot.\n` +
         `Prefix: \`${prefix}\` or use Slash Commands (\`/\`).\n` +
         `Select a category from the dropdown menu below to view its commands.\n\n` +
+        `📊 **Falcon Tracking**\n` +
+        `\`${prefix}invites\`, \`${prefix}inviter\`, \`${prefix}topinvites\`, \`${prefix}messages\`, \`${prefix}voicetime\`\n\n` +
+        `🔊 **VoiceMaster & Security**\n` +
+        `\`${prefix}voicemaster setup\`, \`${prefix}antinuke\`, \`${prefix}verification\`, \`${prefix}vanityrole\`\n\n` +
         `🎵 **Music**\n` +
         `\`${prefix}play\`, \`${prefix}skip\`, \`${prefix}queue\`, \`${prefix}np\`, \`${prefix}volume\`, \`${prefix}lyrics\`\n\n` +
         `🛠️ **Server Management**\n` +
-        `\`${prefix}welcome\`, \`${prefix}ticket\`, \`${prefix}suggestion\`, \`${prefix}starboard\`, \`${prefix}tag\`, \`${prefix}trigger\`\n\n` +
-        `🛡️ **Moderation**\n` +
+        `\`${prefix}welcome\`, \`${prefix}ticket\`, \`${prefix}suggestion\`, \`${prefix}starboard\`, \`${prefix}tag\`, \`${prefix}greet\`\n\n` +
+        `🔨 **Moderation**\n` +
         `\`${prefix}ban\`, \`${prefix}kick\`, \`${prefix}timeout\`, \`${prefix}warn\`, \`${prefix}purge\`, \`${prefix}lock\`, \`${prefix}slowmode\`\n\n` +
         `🎭 **Role Administration**\n` +
         `\`${prefix}buttonrole\`, \`${prefix}selectrole\`, \`${prefix}reactionrole\`, \`${prefix}temprole\`, \`${prefix}role\`, \`${prefix}autorole\`\n\n` +
@@ -93,10 +100,13 @@ class HelpCommand extends Command {
         .setPlaceholder('Select a category...')
         .addOptions([
           { label: 'Overview', value: 'home', description: 'Return to main command directory', emoji: '🏠' },
+          { label: 'Falcon Tracking', value: 'tracking', description: 'Invite tracking, message counts, voice time & roles', emoji: '📊' },
+          { label: 'VoiceMaster', value: 'voice', description: 'Join-to-Create temporary voice channels', emoji: '🔊' },
+          { label: 'Anti-Nuke & Security', value: 'security', description: 'Anti-bot, anti-raid, and security protection', emoji: '🛡️' },
           { label: 'Music', value: 'music', description: 'Music playback, queue, volume, lyrics', emoji: '🎵' },
           { label: 'Server Management', value: 'server', description: 'Tickets, suggestions, welcome, starboard, logs', emoji: '🛠️' },
-          { label: 'Moderation', value: 'moderation', description: 'Bans, mutes, kicks, warnings, cases, lock, purge', emoji: '🛡️' },
-          { label: 'Role Administration', value: 'roles', description: 'Button roles, select menus, reaction roles, autorole', emoji: '🎭' },
+          { label: 'Moderation', value: 'moderation', description: 'Bans, mutes, kicks, warnings, cases, lock, purge', emoji: '🔨' },
+          { label: 'Role Administration', value: 'roles', description: 'Button roles, select menus, reaction roles, vanity role', emoji: '🎭' },
           { label: 'AutoMod', value: 'automod', description: 'Anti-invite, anti-link, anti-spam, bad words filter', emoji: '🤖' },
           { label: 'Giveaways', value: 'giveaway', description: 'Timed giveaways, reaction drops, rerolls', emoji: '🎉' },
           { label: 'Highlights', value: 'highlight', description: 'Keyword DM alerts and mention tracking', emoji: '🔔' },

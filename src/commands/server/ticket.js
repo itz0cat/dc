@@ -24,7 +24,10 @@ class TicketCommand extends Command {
         .setDescription('Support ticket system')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
         .addSubcommand(sub => sub.setName('setup').setDescription('Setup the ticket panel').addChannelOption(opt => opt.setName('channel').setDescription('Channel to place ticket panel').addChannelTypes(ChannelType.GuildText)))
-        .addSubcommand(sub => sub.setName('config').setDescription('Configure ticket role, log channel, and parent category').addRoleOption(opt => opt.setName('role').setDescription('Staff role for tickets')).addChannelOption(opt => opt.setName('log_channel').setDescription('Log channel for transcripts')).addChannelOption(opt => opt.setName('category').setDescription('Parent category for tickets').addChannelTypes(ChannelType.GuildCategory)))
+        .addSubcommand(sub => sub.setName('config').setDescription('Configure ticket role, log channel, and categories').addRoleOption(opt => opt.setName('role').setDescription('Staff role for tickets')).addChannelOption(opt => opt.setName('log_channel').setDescription('Log channel for transcripts')).addChannelOption(opt => opt.setName('category').setDescription('Parent category for tickets').addChannelTypes(ChannelType.GuildCategory)).addChannelOption(opt => opt.setName('archive_category').setDescription('Category for archived tickets').addChannelTypes(ChannelType.GuildCategory)))
+        .addSubcommand(sub => sub.setName('archive').setDescription('Archive current ticket without deleting it').addStringOption(opt => opt.setName('reason').setDescription('Archive reason')))
+        .addSubcommand(sub => sub.setName('reopen').setDescription('Reopen an archived ticket'))
+        .addSubcommand(sub => sub.setName('transcript').setDescription('Generate and download HTML transcript'))
         .addSubcommand(sub => sub.setName('add').setDescription('Add user or role to ticket').addUserOption(opt => opt.setName('user').setDescription('User to add').setRequired(true)))
         .addSubcommand(sub => sub.setName('remove').setDescription('Remove user or role from ticket').addUserOption(opt => opt.setName('user').setDescription('User to remove').setRequired(true)))
         .addSubcommand(sub => sub.setName('close').setDescription('Close current ticket').addStringOption(opt => opt.setName('reason').setDescription('Reason for closing')))
@@ -98,6 +101,93 @@ class TicketCommand extends Command {
         )
         .setColor(botConfig.colors.teal);
       return ctx.reply({ embeds: [embed] });
+    }
+
+    // === ARCHIVE ===
+    if (sub === 'archive') {
+      const ticket = ctx.client.db.prepare('SELECT * FROM tickets WHERE channel_id = ?').get(ctx.channel.id);
+      if (!ticket) return ctx.sendError('Not a Ticket', 'This command can only be used inside a ticket channel.');
+
+      const reason = ctx.isSlash ? (ctx.raw.options.getString('reason') || 'Ticket archived by staff') : (args.slice(1).join(' ') || 'Ticket archived by staff');
+
+      await ctx.reply({ embeds: [RotiEmbed.warning('Archiving Ticket', 'Generating transcript and archiving channel...')] });
+
+      const transcript = await createTranscript(ctx.channel);
+
+      // Deny send permissions to ticket creator
+      await ctx.channel.permissionOverwrites.edit(ticket.user_id, {
+        ViewChannel: true,
+        SendMessages: false,
+        AttachFiles: false
+      }).catch(() => {});
+
+      // Move to archive category if configured
+      const panel = ctx.client.db.prepare('SELECT * FROM ticket_panels WHERE guild_id = ?').get(guild.id);
+      if (panel && panel.archived_category_id) {
+        await ctx.channel.setParent(panel.archived_category_id).catch(() => {});
+      }
+
+      await ctx.channel.setName(`archived-${ctx.channel.name.replace(/^(ticket-|✅-)/, '')}`).catch(() => {});
+
+      ctx.client.db.prepare("UPDATE tickets SET status = 'archived', archived_at = ?, close_reason = ? WHERE id = ?")
+        .run(Date.now(), reason, ticket.id);
+
+      ctx.client.db.prepare(`
+        INSERT INTO ticket_archives (ticket_id, guild_id, user_id, closed_by, channel_name, reason, created_at, closed_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(ticket.id, guild.id, ticket.user_id, ctx.user.id, ctx.channel.name, reason, ticket.created_at, Date.now());
+
+      if (panel && panel.log_channel_id && transcript) {
+        const logChan = guild.channels.cache.get(panel.log_channel_id);
+        if (logChan) {
+          logChan.send({
+            embeds: [RotiEmbed.info('📦 Ticket Archived Log', `**Ticket:** <#${ctx.channel.id}>\n**User:** <@${ticket.user_id}>\n**Archived by:** <@${ctx.user.id}>\n**Reason:** ${reason}`)],
+            files: [transcript]
+          }).catch(() => {});
+        }
+      }
+
+      return ctx.channel.send({
+        embeds: [RotiEmbed.success('Ticket Archived', `📦 This ticket has been **archived**.\nChannel is now read-only.\nUse \`?ticket reopen\` to restore active access.`)]
+      });
+    }
+
+    // === REOPEN ===
+    if (sub === 'reopen' || sub === 'unarchive') {
+      const ticket = ctx.client.db.prepare('SELECT * FROM tickets WHERE channel_id = ?').get(ctx.channel.id);
+      if (!ticket) return ctx.sendError('Not a Ticket', 'This command can only be used inside a ticket channel.');
+
+      // Restore permissions
+      await ctx.channel.permissionOverwrites.edit(ticket.user_id, {
+        ViewChannel: true,
+        SendMessages: true,
+        AttachFiles: true,
+        EmbedLinks: true,
+        ReadMessageHistory: true
+      }).catch(() => {});
+
+      const panel = ctx.client.db.prepare('SELECT * FROM ticket_panels WHERE guild_id = ?').get(guild.id);
+      if (panel && panel.parent_category_id) {
+        await ctx.channel.setParent(panel.parent_category_id).catch(() => {});
+      }
+
+      await ctx.channel.setName(ctx.channel.name.replace(/^archived-/, 'ticket-')).catch(() => {});
+
+      ctx.client.db.prepare("UPDATE tickets SET status = 'open' WHERE id = ?").run(ticket.id);
+
+      return ctx.sendSuccess('Ticket Reopened', `🔓 This ticket has been **reopened** and active permissions restored for <@${ticket.user_id}>.`);
+    }
+
+    // === TRANSCRIPT ===
+    if (sub === 'transcript') {
+      await ctx.defer();
+      const transcript = await createTranscript(ctx.channel);
+      if (!transcript) return ctx.sendError('Transcript Error', 'Could not generate transcript.');
+
+      return ctx.reply({
+        content: '📄 **Complete Conversation HTML Transcript:**',
+        files: [transcript]
+      });
     }
 
     // === ADD ===

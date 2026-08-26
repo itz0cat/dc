@@ -41,12 +41,14 @@ dbInstance.exec(`
     guild_id TEXT,
     channel_id TEXT,
     user_id TEXT,
-    category TEXT DEFAULT "General",
-    status TEXT DEFAULT "open",
+    category TEXT DEFAULT 'General',
+    status TEXT DEFAULT 'open',
     claimed_by TEXT,
     created_at INTEGER,
     closed_at INTEGER,
-    close_reason TEXT
+    archived_at INTEGER,
+    close_reason TEXT,
+    transcript_html TEXT
   );
 
   CREATE TABLE IF NOT EXISTS ticket_panels (
@@ -56,11 +58,25 @@ dbInstance.exec(`
     role_id TEXT,
     parent_category_id TEXT,
     claimed_category_id TEXT,
+    archived_category_id TEXT,
     log_channel_id TEXT,
-    initial_message TEXT DEFAULT "Thank you for creating a ticket! Support staff will assist you shortly.",
-    claimed_message TEXT DEFAULT "This ticket has been claimed by staff.",
+    initial_message TEXT DEFAULT 'Thank you for creating a ticket! Support staff will assist you shortly.',
+    claimed_message TEXT DEFAULT 'This ticket has been claimed by staff.',
     member_can_close INTEGER DEFAULT 1,
-    categories TEXT DEFAULT "[]"
+    categories TEXT DEFAULT '[]'
+  );
+
+  CREATE TABLE IF NOT EXISTS ticket_archives (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER,
+    guild_id TEXT,
+    user_id TEXT,
+    closed_by TEXT,
+    channel_name TEXT,
+    reason TEXT,
+    transcript TEXT,
+    created_at INTEGER,
+    closed_at INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS suggestions (
@@ -176,6 +192,115 @@ dbInstance.exec(`
     reason TEXT,
     duration INTEGER,
     created_at INTEGER
+  );
+
+  /* === FALCON BOT FEATURES SCHEMA === */
+  CREATE TABLE IF NOT EXISTS invites (
+    guild_id TEXT,
+    user_id TEXT,
+    regular INTEGER DEFAULT 0,
+    fake INTEGER DEFAULT 0,
+    left INTEGER DEFAULT 0,
+    bonus INTEGER DEFAULT 0,
+    PRIMARY KEY (guild_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS invite_codes (
+    guild_id TEXT,
+    code TEXT PRIMARY KEY,
+    user_id TEXT,
+    uses INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS invite_members (
+    guild_id TEXT,
+    user_id TEXT,
+    inviter_id TEXT,
+    code TEXT,
+    timestamp INTEGER,
+    PRIMARY KEY (guild_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS invite_roles (
+    guild_id TEXT,
+    invites_needed INTEGER,
+    role_id TEXT,
+    PRIMARY KEY (guild_id, invites_needed)
+  );
+
+  CREATE TABLE IF NOT EXISTS message_stats (
+    guild_id TEXT,
+    user_id TEXT,
+    daily_count INTEGER DEFAULT 0,
+    weekly_count INTEGER DEFAULT 0,
+    total_count INTEGER DEFAULT 0,
+    last_message INTEGER DEFAULT 0,
+    PRIMARY KEY (guild_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS message_roles (
+    guild_id TEXT,
+    messages_needed INTEGER,
+    role_id TEXT,
+    PRIMARY KEY (guild_id, messages_needed)
+  );
+
+  CREATE TABLE IF NOT EXISTS voice_stats (
+    guild_id TEXT,
+    user_id TEXT,
+    total_time_ms INTEGER DEFAULT 0,
+    joined_at INTEGER DEFAULT 0,
+    PRIMARY KEY (guild_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS voice_roles (
+    guild_id TEXT,
+    time_needed_ms INTEGER,
+    role_id TEXT,
+    PRIMARY KEY (guild_id, time_needed_ms)
+  );
+
+  CREATE TABLE IF NOT EXISTS voice_master_configs (
+    guild_id TEXT PRIMARY KEY,
+    category_id TEXT,
+    hub_channel_id TEXT,
+    default_limit INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS temp_voice_channels (
+    guild_id TEXT,
+    channel_id TEXT PRIMARY KEY,
+    owner_id TEXT,
+    created_at INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS antinuke_configs (
+    guild_id TEXT PRIMARY KEY,
+    enabled INTEGER DEFAULT 0,
+    logs_channel_id TEXT,
+    anti_bot INTEGER DEFAULT 1,
+    anti_ban INTEGER DEFAULT 1,
+    anti_kick INTEGER DEFAULT 1,
+    anti_channel INTEGER DEFAULT 1,
+    anti_role INTEGER DEFAULT 1,
+    anti_webhook INTEGER DEFAULT 1,
+    whitelist TEXT DEFAULT "[]"
+  );
+
+  CREATE TABLE IF NOT EXISTS vanity_roles (
+    guild_id TEXT PRIMARY KEY,
+    vanity_string TEXT,
+    role_id TEXT,
+    channel_id TEXT,
+    log_enabled INTEGER DEFAULT 1
+  );
+
+  CREATE TABLE IF NOT EXISTS verification_configs (
+    guild_id TEXT PRIMARY KEY,
+    channel_id TEXT,
+    role_id TEXT,
+    message_id TEXT,
+    type TEXT DEFAULT "button"
   );
 
   CREATE TABLE IF NOT EXISTS warnings (

@@ -242,6 +242,25 @@ module.exports = async (client, interaction) => {
       });
     }
 
+    // === FALCON VERIFICATION BUTTON ===
+    if (customId === 'falcon_verify_btn') {
+      const config = client.db.prepare('SELECT role_id FROM verification_configs WHERE guild_id = ?').get(guild.id);
+      if (!config || !config.role_id) {
+        return interaction.reply({ content: '❌ Verification role is not configured.', ephemeral: true });
+      }
+
+      if (member.roles.cache.has(config.role_id)) {
+        return interaction.reply({ content: '✅ You are already verified!', ephemeral: true });
+      }
+
+      try {
+        await member.roles.add(config.role_id, 'Falcon Member Verification');
+        return interaction.reply({ content: '🎉 **Verification Successful!** Welcome to the server!', ephemeral: true });
+      } catch (err) {
+        return interaction.reply({ content: `❌ Failed to grant verified role: ${err.message}`, ephemeral: true });
+      }
+    }
+
     // === GIVEAWAY ENTER ===
     if (customId.startsWith('ga_enter:')) {
       const gaId = customId.split(':')[1];
