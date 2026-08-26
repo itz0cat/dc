@@ -111,17 +111,20 @@ class RotiClient extends DiscordClient {
   }
 
   async registerSlashCommands() {
-    if (this.slashCommands.length === 0) return;
+    if (!this.token) return;
+    const rest = new REST({ version: '10' }).setToken(this.token);
+
     try {
-      this.logger.info(`Registering ${this.slashCommands.length} Global Slash commands with Discord...`);
-      const rest = new REST({ version: '10' }).setToken(this.token);
+      this.logger.info(`Registering ${Math.min(100, this.slashCommands.length)} Global Slash commands with Discord...`);
+      // Discord REST API hard limit is 100 top-level slash commands per application
+      const commandsToRegister = this.slashCommands.slice(0, 100);
       await rest.put(
         Routes.applicationCommands(this.user.id),
-        { body: this.slashCommands }
+        { body: commandsToRegister }
       );
-      this.logger.info('Successfully registered global application (slash) commands!');
+      this.logger.info('✅ Successfully registered Global Slash commands with Discord Gateway!');
     } catch (err) {
-      this.logger.error(`Error registering slash commands: ${err.message}`, { stack: err.stack });
+      this.logger.error('Failed to register global slash commands:', err);
     }
   }
 
