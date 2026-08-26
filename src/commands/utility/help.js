@@ -14,10 +14,10 @@ class HelpCommand extends Command {
   constructor() {
     super({
       name: 'help',
-      description: 'Display the complete Hade-style interactive music & server command center',
+      description: 'Display the complete interactive command directory and category menu',
       category: 'Utility',
       aliases: ['commands', 'h', 'menu'],
-      usage: 'help [category / command]',
+      usage: 'help [command / category]',
       slashData: new SlashCommandBuilder()
         .setName('help')
         .setDescription('Interactive command directory')
@@ -26,87 +26,49 @@ class HelpCommand extends Command {
   }
 
   getCategoryEmbed(categoryKey, client, prefix) {
-    const categoryData = {
-      music: {
-        title: 'Music',
-        cmds: [
-          'connect', 'playfile', 'play', 'autoplay', 'grab', 'clear', 'skip', 'loop', 'skipto', 'queue',
-          'queue reverse', 'history', 'shuffle', 'stop', 'volume', 'replay', 'previous', 'previous add',
-          'pause', 'resume', 'remove', 'remove dupes', 'remove user', 'leavecleanup', 'bump', 'seek',
-          'nowplaying', 'disconnect', 'forward', 'rewind', 'lyrics', 'lyrics search', 'search', 'radio',
-          'speak', 'move', 'move bot', 'voteskip'
-        ]
-      },
-      favourites: {
-        title: 'Favourites',
-        cmds: [
-          'like', 'dislike', 'showliked', 'clearliked', 'playliked', 'sortliked', 'playlist',
-          'playlist create', 'playlist addtrack', 'playlist removetrack', 'playlist list',
-          'playlist setcover', 'playlist view', 'playlist addnowplaying', 'playlist play',
-          'playlist import', 'playlist delete', 'playlist savequeue'
-        ]
-      },
-      config: {
-        title: 'Config',
-        cmds: [
-          'debug', 'voicechannelstatus', 'announce', 'buttons', '247', 'settings', 'settings reset',
-          'setprefix', 'switchaudionode', 'forcefix', 'dj', 'dj restrict', 'dj info', 'dj reset',
-          'restrictcommand'
-        ]
-      },
-      miscellaneous: {
-        title: 'Miscellaneous',
-        cmds: [
-          'ping', 'statistics', 'statistics lavalink', 'invite', 'support', 'vote', 'premium',
-          'premium check', 'premium purchase', 'premium deactivate', 'premium activate',
-          'premium noprefix', 'customize', 'afk', 'calculator', 'weather', 'wikipedia', 'crypto'
-        ]
-      },
-      lastfm: {
-        title: 'Lastfm',
-        cmds: [
-          'lastfm', 'lastfm login', 'lastfm scrobble', 'lastfm logout'
-        ]
-      },
-      spotify: {
-        title: 'Spotify',
-        cmds: [
-          'spotify', 'spotify login', 'spotify logout', 'spotify playlists', 'searchplaylist',
-          'searchartist', 'searchalbum'
-        ]
-      },
-      filters: {
-        title: 'Filters',
-        cmds: [
-          'resetfilter', '8d', 'karaoke', 'lofi', 'nightcore', 'daycore', 'bassboost', 'deepbass',
-          'darthvader', 'chipmunk', 'slowed', 'vibration', 'vibrato', 'tremolo'
-        ]
-      },
-      moderation: {
-        title: 'Moderation & Server',
-        cmds: [
-          'ban', 'kick', 'softban', 'tempban', 'timeout', 'removetimeout', 'warn', 'warnings',
-          'delwarn', 'clearwarns', 'lock', 'unlock', 'purge', 'ticket', 'ticket archive',
-          'ticket reopen', 'ticket transcript', 'welcome', 'autorole', 'verification', 'antinuke'
-        ]
-      },
-      tracking: {
-        title: 'Falcon Tracking',
-        cmds: [
-          'invites', 'inviter', 'topinvites', 'inviteroles', 'vanity', 'messages', 'topmessages',
-          'messageroles', 'voicetime', 'topvoice', 'voiceroles', 'voicemaster'
-        ]
-      }
+    const categoriesMap = {
+      tracking: { name: 'Falcon Tracking & Growth', icon: '📊', desc: 'Invite tracking, message counts, voice activity & automated milestone role rewards' },
+      voice: { name: 'VoiceMaster (Temp Voice)', icon: '🔊', desc: 'Join-to-Create custom temporary voice channels with lock, limit, permit and claim' },
+      security: { name: 'Anti-Nuke & Security', icon: '🛡️', desc: 'Server raid defense, anti-bot add, mass ban/kick blocks and admin whitelisting' },
+      music: { name: 'Music & Audio', icon: '🎵', desc: 'High-quality music streaming, queue, audio filters, favourites & lyrics' },
+      server: { name: 'Server Management', icon: '🛠️', desc: 'Welcome cards, ticket system, suggestions, starboard, logging & verification' },
+      moderation: { name: 'Moderation', icon: '🔨', desc: 'Bans, softbans, timeouts, warnings, cases, locks, purges & modlogs' },
+      roles: { name: 'Role Administration', icon: '🎭', desc: 'Button self-roles, dropdown select roles, vanity status roles & temproles' },
+      automod: { name: 'AutoMod', icon: '🤖', desc: 'Anti-invite links, anti-external links, anti-spam, caps filter & blacklist words' },
+      giveaway: { name: 'Giveaways', icon: '🎉', desc: 'Interactive timed giveaways, quick reaction drops, rerolls & winner picking' },
+      highlight: { name: 'Highlights', icon: '🔔', desc: 'Custom keyword direct message mention notifications' },
+      minigames: { name: 'Mini-Games', icon: '🎮', desc: 'Blackjack, Tic-Tac-Toe, Connect 4, Snake, Trivia & Rock-Paper-Scissors' },
+      fun: { name: 'Fun & Social', icon: '🎲', desc: 'Memes, cute cat/dog images, jokes, ascii art, ratings, polls & anime actions' },
+      utility: { name: 'Utility', icon: '⚙️', desc: 'Weather, translator, QR generator, URL shortener, userinfo, calc & stats' }
     };
 
-    const cat = categoryData[categoryKey.toLowerCase()] || categoryData.music;
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const catKey = categoryKey.toLowerCase();
+    const catInfo = categoriesMap[catKey] || { name: categoryKey, icon: '📁', desc: 'Module commands' };
+    
+    // Filter matching commands from loaded collection
+    const cmds = client.commands.filter(c => {
+      const cCat = (c.category || '').toLowerCase();
+      if (catKey === 'tracking') return cCat === 'tracking';
+      if (catKey === 'voice') return cCat === 'voice';
+      if (catKey === 'security') return cCat === 'security';
+      if (catKey === 'giveaway') return cCat === 'giveaway';
+      if (catKey === 'highlight') return cCat === 'highlight';
+      if (catKey === 'minigames') return cCat === 'minigames';
+      return cCat === catKey;
+    });
 
     const embed = new RotiEmbed()
-      .setTitle(`__${cat.title}__`)
-      .setDescription(`\`\`\`\n${cat.cmds.join(', ')}\n\`\`\``)
-      .setFooter({ text: `Total Commands: ${cat.cmds.length} | Today at ${timeStr}`, iconURL: client.user.displayAvatarURL() })
+      .setTitle(`${catInfo.icon} ${catInfo.name} Commands`)
+      .setDescription(
+        `*${catInfo.desc}*\n\n` +
+        `Prefix: \`${prefix}\` or use Slash Commands (\`/\`)\n` +
+        `For detailed info on a command: \`${prefix}help <command>\`\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        (cmds.size > 0 
+          ? cmds.map(c => `**\`${prefix}${c.name}\`**\n> ${c.description}${c.aliases && c.aliases.length > 0 ? `\n> *Aliases: ${c.aliases.map(a => `\`${a}\``).join(', ')}*` : ''}`).join('\n\n')
+          : '*No commands in this category.*')
+      )
+      .setFooter({ text: `Total Commands in Category: ${cmds.size}`, iconURL: client.user.displayAvatarURL() })
       .setColor(botConfig.colors.teal);
 
     return embed;
@@ -114,22 +76,34 @@ class HelpCommand extends Command {
 
   getOverviewEmbed(client, prefix) {
     return new RotiEmbed()
-      .setTitle(`✨ Cat Help Menu ✨`)
+      .setTitle(`🛡️ ${botConfig.name} Command Directory`)
       .setDescription(
-        `### 🚀 Jumpstart Your Music Journey\n` +
-        `🎵 \`/play <song name | URL>\` - Start enjoying your favorite tunes instantly.\n\n` +
-        `### 📜 Command Categories\n` +
-        `• 🎶 **Music**\n` +
-        `• 🤍 **Favourites**\n` +
-        `• ⚙️ **Config**\n` +
-        `• 🗞️ **Miscellaneous**\n` +
-        `• ❤️ **Lastfm**\n` +
-        `• 💚 **Spotify**\n` +
-        `• 🎛️ **Filters**\n` +
-        `• 🛡️ **Moderation & Server**\n` +
-        `• 📊 **Falcon Tracking**`
+        `Welcome to **${botConfig.name}**! The premier all-in-one Discord bot.\n` +
+        `Prefix: \`${prefix}\` or use Slash Commands (\`/\`).\n` +
+        `Select a category from the dropdown menu below to view its commands.\n\n` +
+        `📊 **Falcon Tracking**\n` +
+        `\`${prefix}invites\`, \`${prefix}inviter\`, \`${prefix}topinvites\`, \`${prefix}messages\`, \`${prefix}voicetime\`\n\n` +
+        `🔊 **VoiceMaster & Security**\n` +
+        `\`${prefix}voicemaster setup\`, \`${prefix}antinuke\`, \`${prefix}verification\`, \`${prefix}vanityrole\`\n\n` +
+        `🎵 **Music & Audio**\n` +
+        `\`${prefix}play\`, \`${prefix}skip\`, \`${prefix}filter\`, \`${prefix}like\`, \`${prefix}queue\`, \`${prefix}nowplaying\`\n\n` +
+        `🛠️ **Server Management**\n` +
+        `\`${prefix}welcome\`, \`${prefix}ticket\`, \`${prefix}suggestion\`, \`${prefix}starboard\`, \`${prefix}tag\`, \`${prefix}greet\`\n\n` +
+        `🔨 **Moderation**\n` +
+        `\`${prefix}ban\`, \`${prefix}kick\`, \`${prefix}timeout\`, \`${prefix}warn\`, \`${prefix}purge\`, \`${prefix}lock\`, \`${prefix}slowmode\`\n\n` +
+        `🎭 **Role Administration**\n` +
+        `\`${prefix}buttonrole\`, \`${prefix}selectrole\`, \`${prefix}reactionrole\`, \`${prefix}temprole\`, \`${prefix}role\`, \`${prefix}autorole\`\n\n` +
+        `🤖 **AutoMod**\n` +
+        `\`${prefix}automod\`, \`${prefix}banword\`\n\n` +
+        `🎉 **Giveaways & Highlights**\n` +
+        `\`${prefix}giveaway start\`, \`${prefix}giveaway drop\`, \`${prefix}highlight add\`\n\n` +
+        `🎮 **Mini-Games & Fun**\n` +
+        `\`${prefix}blackjack\`, \`${prefix}tictactoe\`, \`${prefix}connectfour\`, \`${prefix}snake\`, \`${prefix}trivia\`, \`${prefix}8ball\`, \`${prefix}meme\`\n\n` +
+        `⚙️ **Utilities**\n` +
+        `\`${prefix}weather\`, \`${prefix}translate\`, \`${prefix}qr\`, \`${prefix}userinfo\`, \`${prefix}serverinfo\`, \`${prefix}calc\`, \`${prefix}ping\``
       )
-      .setFooter({ text: `Tune In, Turn Up – Only with Cat Music!`, iconURL: client.user.displayAvatarURL() })
+      .setThumbnail(client.user.displayAvatarURL())
+      .setFooter({ text: `Cat • Made with ❤️ by itz0cat`, iconURL: client.user.displayAvatarURL() })
       .setColor(botConfig.colors.teal);
   }
 
@@ -137,37 +111,41 @@ class HelpCommand extends Command {
     const selectMenu = new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId('help_select')
-        .setPlaceholder('Select A Category From Menu')
+        .setPlaceholder('Select a category...')
         .addOptions([
-          { label: 'Home / Overview', value: 'home', emoji: '✨' },
-          { label: 'Music', value: 'music', emoji: '🎶' },
-          { label: 'Favourites', value: 'favourites', emoji: '🤍' },
-          { label: 'Config', value: 'config', emoji: '⚙️' },
-          { label: 'Miscellaneous', value: 'miscellaneous', emoji: '🗞️' },
-          { label: 'Lastfm', value: 'lastfm', emoji: '❤️' },
-          { label: 'Spotify', value: 'spotify', emoji: '💚' },
-          { label: 'Filters', value: 'filters', emoji: '🎛️' },
-          { label: 'Moderation & Server', value: 'moderation', emoji: '🛡️' },
-          { label: 'Falcon Tracking', value: 'tracking', emoji: '📊' }
+          { label: 'Overview', value: 'home', description: 'Return to main command directory', emoji: '🏠' },
+          { label: 'Falcon Tracking', value: 'tracking', description: 'Invite tracking, message counts, voice time & roles', emoji: '📊' },
+          { label: 'VoiceMaster', value: 'voice', description: 'Join-to-Create temporary voice channels', emoji: '🔊' },
+          { label: 'Anti-Nuke & Security', value: 'security', description: 'Anti-bot, anti-raid, and security protection', emoji: '🛡️' },
+          { label: 'Music & Audio', value: 'music', description: 'Music playback, filters, favourites, queue, lyrics', emoji: '🎵' },
+          { label: 'Server Management', value: 'server', description: 'Tickets, suggestions, welcome, starboard, logs', emoji: '🛠️' },
+          { label: 'Moderation', value: 'moderation', description: 'Bans, mutes, kicks, warnings, cases, lock, purge', emoji: '🔨' },
+          { label: 'Role Administration', value: 'roles', description: 'Button roles, select menus, reaction roles, vanity role', emoji: '🎭' },
+          { label: 'AutoMod', value: 'automod', description: 'Anti-invite, anti-link, anti-spam, bad words filter', emoji: '🤖' },
+          { label: 'Giveaways', value: 'giveaway', description: 'Timed giveaways, reaction drops, rerolls', emoji: '🎉' },
+          { label: 'Highlights', value: 'highlight', description: 'Keyword DM alerts and mention tracking', emoji: '🔔' },
+          { label: 'Mini-Games', value: 'minigames', description: 'Blackjack, Tic-Tac-Toe, Connect 4, Snake, Trivia', emoji: '🎮' },
+          { label: 'Fun & Social', value: 'fun', description: 'Memes, cat/dog photos, jokes, ascii, anime actions', emoji: '🎲' },
+          { label: 'Utilities', value: 'utility', description: 'Weather, translate, QR, shortener, userinfo, calc', emoji: '⚙️' }
         ])
     );
 
     const buttonRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setLabel('Invite')
+        .setLabel('Invite Cat')
         .setStyle(ButtonStyle.Link)
         .setURL(`https://discord.com/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`)
-        .setEmoji('✉️'),
+        .setEmoji('✨'),
       new ButtonBuilder()
-        .setLabel('Support Server')
+        .setLabel('Documentation')
         .setStyle(ButtonStyle.Link)
         .setURL('https://docs.letsroti.com/')
-        .setEmoji('📢'),
+        .setEmoji('📖'),
       new ButtonBuilder()
-        .setLabel('Premium')
+        .setLabel('GitHub')
         .setStyle(ButtonStyle.Link)
         .setURL('https://github.com/itz0cat/dc')
-        .setEmoji('🧡')
+        .setEmoji('🐙')
     );
 
     return [selectMenu, buttonRow];
@@ -177,6 +155,7 @@ class HelpCommand extends Command {
     const query = ctx.isSlash ? ctx.raw.options?.getString('query') : args.join(' ').toLowerCase();
     const prefix = ctx.client.db.getPrefix(ctx.guild.id);
 
+    // If query matches a specific command
     if (query) {
       const command = ctx.client.commands.get(query) || ctx.client.aliases.get(query);
       if (command) {
@@ -185,14 +164,15 @@ class HelpCommand extends Command {
           .setDescription(command.description)
           .addFields(
             { name: 'Category', value: `\`${command.category}\``, inline: true },
-            { name: 'Aliases', value: command.aliases.length > 0 ? command.aliases.map(a => `\`${a}\``).join(', ') : '*None*', inline: true },
+            { name: 'Aliases', value: command.aliases && command.aliases.length > 0 ? command.aliases.map(a => `\`${a}\``).join(', ') : '*None*', inline: true },
             { name: 'Syntax / Usage', value: `\`${prefix}${command.usage}\` or \`/${command.name}\``, inline: false }
           )
           .setColor(botConfig.colors.teal);
         return ctx.reply({ embeds: [embed] });
       }
 
-      const categories = ['music', 'favourites', 'config', 'miscellaneous', 'lastfm', 'spotify', 'filters', 'moderation', 'tracking'];
+      // If query matches a category name
+      const categories = ['tracking', 'voice', 'security', 'music', 'server', 'moderation', 'roles', 'automod', 'giveaway', 'highlight', 'minigames', 'fun', 'utility'];
       const matchedCat = categories.find(c => c.startsWith(query));
       if (matchedCat) {
         const embed = this.getCategoryEmbed(matchedCat, ctx.client, prefix);
@@ -200,6 +180,7 @@ class HelpCommand extends Command {
       }
     }
 
+    // Default Overview Page
     const overviewEmbed = this.getOverviewEmbed(ctx.client, prefix);
     const components = this.getComponents(ctx.client);
 
@@ -218,7 +199,7 @@ class HelpCommand extends Command {
 
     collector.on('collect', async (sel) => {
       if (sel.user.id !== authorId) {
-        return sel.reply({ content: '❌ Open your own help menu with `?help`!', ephemeral: true });
+        return sel.reply({ content: '❌ Use `?help` to open your own interactive menu!', ephemeral: true });
       }
 
       const val = sel.values[0];
