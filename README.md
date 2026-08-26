@@ -1,136 +1,131 @@
-# 🛡️ R.O.T.I Bot - Discord Community Management & Fun Bot
+# 🐱 Cat Discord Bot - Premier All-in-One Community, Music & Management Bot
 
 <div align="center">
 
-![R.O.T.I Banner](https://img.shields.io/badge/R.O.T.I-v2.0.0-00A896?style=for-the-badge&logo=discord&logoColor=white)
+![Cat Banner](https://img.shields.io/badge/Cat%20Bot-v2.5.0-00A896?style=for-the-badge&logo=discord&logoColor=white)
 ![Theme Color](https://img.shields.io/badge/Theme-Teal%20Blue%20%2300A896-00A896?style=for-the-badge)
 ![Created By](https://img.shields.io/badge/Made%20by-itz0cat-00A896?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+![Visibility](https://img.shields.io/badge/Visibility-Public-green?style=for-the-badge)
 
-**The premier all-in-one Discord bot featuring Moderation, Ticket Systems, AutoMod, Giveaways, Suggestions, Starboard, Reaction/Button Roles, Mini-Games, and Utilities.**
+**The ultimate all-in-one Discord bot featuring Music with Audio Filters, Falcon Growth & Activity Tracking, VoiceMaster Temp Voice, Anti-Nuke, Tickets with HTML Transcripts, Moderation, AutoMod, Giveaways, Mini-Games, and Utilities.**
 
 </div>
 
 ---
 
-## 🎨 Theme & Branding
+## 🎨 Theme & Identity
+- **Bot Name:** **Cat**
 - **Primary Color:** Teal Blue (`#00A896`)
-- **Default Prefix:** `r!` (or Slash Commands `/`)
+- **Default Prefix:** `?` (also supports Slash Commands `/`)
 - **Developer:** `itz0cat`
-- **Documentation Reference:** [https://docs.letsroti.com/](https://docs.letsroti.com/)
+- **Total Commands:** **140 Active Commands & 154 Aliases**
 
 ---
 
-## ⚡ Features & Command Directory
+## ⚡ Feature Suites & Command Modules
 
-### 🛠️ Server Management
-- `/welcome [channel] [message] [embed] [image]` - Configure custom welcome cards with placeholders (`?member`, `?server`, `?size`).
-- `/stickyroles [on/off]` - Automatically reassign roles when members leave and rejoin.
-- `/mediaonly <on/off/list>` - Restrict channels to images, videos, and media files.
-- `/linkonly <on/off/list>` - Restrict channels to links only.
-- `/prefix <set/list/remove>` - Customize the server command prefix.
-- `/modrole <set/remove/view>` - Set required moderator role.
-- `/starboard <set/enable/disable/ignore>` - Full starboard system with reaction thresholds.
-- `/memechannel <set/remove>` - Designate automatic meme channels.
-- `/log <set/disable/view>` - Server event logging (message edits, deletes, member joins, mod actions).
-- `/ticket <setup/config/add/remove/close/rename/stats/leaderboard>` - Comprehensive interactive ticket panel with HTML transcripts, claim buttons, and category organization.
-- `/suggestion <set/submit/accept/decline/config/info>` - Suggestions system with voting buttons, discussion threads, and anonymous mode.
-- `/tag <create/delete/list/info/get>` - Custom tag management system.
-- `/trigger <create/delete/list>` - Auto-responder triggers.
+### 🎵 1. Music & Audio Suite
+- `?play <song/URL>` — Play music from Spotify, YouTube Music, SoundCloud, or search terms with real album art & platform badges.
+- `?filter <8d/nightcore/lofi/bassboost/slowed/karaoke/reset>` — Real-time audio filters.
+- `?search <query>` — Interactive track selection dropdown menu with top 10 results.
+- `?playlist <create/add/remove/list/view/play/delete/savequeue>` — Custom user & server saved playlists.
+- `?like` / `?showliked` / `?playliked` / `?clearliked` — Favourites and liked tracks manager.
+- `?radio <lofi/synthwave/gaming/piano>` — 24/7 high-fidelity live stream stations.
+- `?nowplaying` (`?np`) — Live track card with ASCII progress bar and controller buttons.
+- `?bump <pos>` / `?remove <pos/dupes>` / `?move <from> <to>` / `?previous` / `?history` / `?voteskip` / `?247` / `?dj`.
 
-### 🛡️ User Management & Moderation
-- `/ban <user> [reason] [delete_days]` - Ban a user with optional message purge.
-- `/softban <user> [reason]` - Softban a user (kick and clean messages).
-- `/tempban <user> <duration> [reason]` - Temporarily ban a user.
-- `/unban <user_id> [reason]` - Unban a user by ID.
-- `/kick <user> [reason]` - Kick a member from the server.
-- `/vkick <user> [votes]` - Community vote kick.
-- `/timeout <user> <duration> [reason]` - Timeout/mute a member.
-- `/removetimeout <user>` - Remove timeout from a member.
-- `/warn <user> [reason]` - Issue a warning to a member.
-- `/warnings <user>` - View all warnings for a user.
-- `/delwarn <id>` - Delete a specific warning.
-- `/clearwarns <user>` - Clear all warnings for a user.
-- `/case <id>` - View moderation case details.
-- `/reason <case_id> <new_reason>` - Update moderation action reason.
-- `/modlogs <user>` - View infraction history of a user.
-- `/lock [channel]` - Lock down a channel.
-- `/unlock [channel]` - Unlock a locked channel.
-- `/slowmode <time>` - Set channel slowmode.
-- `/purge <amount> [filter]` - Bulk delete messages with optional filters (bots, links, media, user).
-- `/nickname <user> [nickname]` - Change or reset a user's nickname.
-- `/decancer <user>` - Remove zalgo / unreadable characters from nickname.
-- `/note <set/get/remove/clear>` - Moderator notes on users.
-- `/voicemove <from> <to>` - Mass move voice channel users.
-- `/emoji <add/list>` - Add custom emojis to the server.
+---
 
-### 🎭 Role Administration
-- `/buttonrole <role> [label] [emoji]` - Interactive button role panels.
-- `/selectrole <roles...> [placeholder]` - Dropdown select menu self-roles.
-- `/reactionrole <add/remove/removeall>` - Classic reaction roles.
-- `/temprole <user> <role> <duration>` - Temporary timed role assignment.
-- `/role <create/delete/update/info/members/list/removeall>` - Comprehensive role management.
+### 📊 2. Falcon Tracking & Activity Suite
+- `?invites [user]` — Real-time invite counts (regular, fake, left, and bonus).
+- `?inviter [user]` — Identify who invited a specific member.
+- `?topinvites` — Server invite leaderboard.
+- `?inviteroles` — Automated milestone role rewards based on invite counts.
+- `?messages [user]` — Message activity tracker (daily, weekly, total).
+- `?topmessages` — Most active chatters leaderboard.
+- `?voicetime [user]` — Voice channel activity time tracker.
+- `?topvoice` — Voice activity leaderboard.
+- `?voiceroles` — Milestone role rewards for voice channel time.
 
-### 🤖 AutoMod Protection
-- `/automod [feature] [on/off]` - Toggle Anti-Invite links, Anti-Links, Anti-Spam, Anti-Caps (>70%), Anti-Mass Mention.
-- `/banword <add/remove/list/clear>` - Blacklisted words auto-deletion.
+---
 
-### 🎉 Giveaways & Highlights
-- `/giveaway start <duration> <winners> <prize> [required_role]` - Timed giveaways with interactive enter button (`🎉`).
-- `/giveaway drop <prize> <winners>` - Fast reaction drop giveaway.
-- `/giveaway end`, `/giveaway reroll`, `/giveaway delete`, `/giveaway list`.
-- `/highlight <add/remove/list/removeall/ignorechannel/ignoreuser>` - Direct message keyword mention alerts.
+### 🔊 3. VoiceMaster (Join-to-Create Temporary Voice Channels)
+- `?voicemaster setup` — Automated Hub creation for temporary voice channels.
+- `lock`, `unlock`, `name`, `limit`, `permit`, `reject`, `claim` — Complete voice channel ownership controls.
 
-### 🎮 Mini-Games & Entertainment
-- `/blackjack` - Interactive Blackjack card game vs the dealer.
-- `/tictactoe <opponent>` - 3x3 interactive button Tic-Tac-Toe.
-- `/connectfour <opponent>` - Connect 4 game against a friend.
-- `/snake` - Directional button Snake game.
-- `/rockpaperscissor [opponent]` - RPS against bot or member.
-- `/8ball <question>` - Magic 8-ball fortune answers.
-- `/captcha` - Typing speed captcha challenge.
-- `/choose <choices>` - Random option picker.
-- `/dice [sides] [count]` - Roll dice.
-- `/emojify <text>` - Convert text to letter emojis.
-- `/enlarge <emoji>` - Enlarge custom emoji.
-- `/flip` - Coin flipper.
-- `/password [length]` - Secure password generator.
-- `/poll <question> | [options]` - Create polls with reaction voting.
-- `/quote <message_id>` - Quote previous messages.
-- `/snipe` - Retrieve last deleted message.
-- `/meme` - Random memes from Reddit.
+---
 
-### ⚙️ Utilities & Miscellaneous
-- `/help [command]` - Interactive command directory.
-- `/ping` - Check bot and API latency.
-- `/afk <set/clear/list>` - AFK system with mention alerts and auto-return.
-- `/announce <channel> <message> [ping]` - Send server announcements.
-- `/embed <channel> <title> | <desc>` - Custom embed generator.
-- `/remindme <time> <reason>` - Timed DM & channel reminders.
-- `/avatar [user]`, `/banner [user]`, `/servericon`, `/serverinfo`, `/userinfo`, `/lookup [id]`, `/membercount`.
-- `/calc <expression>` - Safe mathematical calculator.
-- `/github <repo>` - GitHub repository statistics lookup.
-- `/urban <word>` - Urban dictionary definitions.
-- `/stats`, `/uptime`, `/invite`, `/report <issue>`.
+### 🛡️ 4. Anti-Nuke & Server Security
+- `?antinuke <setup/enable/disable/whitelist/settings>` — Automated protection against unauthorized bot adds, mass kicks, mass bans, channel purges, and role deletions.
+- `?verification <setup/channel/role/panel>` — Interactive button verification gateway.
+- `?vanityrole <set/remove/view>` — Automatic role rewards for users displaying server vanity in their custom status.
+
+---
+
+### 🛠️ 5. Server Management & Tickets
+- `?welcome [channel] [message]` — Custom welcome cards with `{inviter}`, `{invites}`, and `{count}` variables.
+- `?ticket <setup/archive/reopen/transcript/close>` — Full ticket lifecycle management with HTML transcripts and category archiving.
+- `?suggestion <submit/accept/decline>` — Interactive suggestion system with voting buttons.
+- `?starboard` / `?tag` / `?trigger` / `?stickyroles` / `?linkonly` / `?mediaonly` / `?log`.
+
+---
+
+### 🔨 6. Moderation & AutoMod
+- `?ban`, `?softban`, `?tempban`, `?unban`, `?kick`, `?timeout`, `?removetimeout`.
+- `?warn`, `?warnings`, `?delwarn`, `?clearwarns`, `?case`, `?reason`, `?modlogs`.
+- `?lock`, `?unlock`, `?slowmode`, `?purge <amount> [filter]`.
+- `?automod <anti-invite/anti-link/anti-spam/caps>` and `?banword`.
+
+---
+
+### 🎮 7. Mini-Games, Fun & Social
+- `?blackjack`, `?tictactoe`, `?connectfour`, `?snake`, `?trivia`, `?rockpaperscissor`.
+- `?giveaway <start/drop/reroll>`, `?highlight <add/list/remove>`.
+- `?8ball`, `?meme`, `?cat`, `?dog`, `?joke`, `?quote`, `?hug`, `?kiss`, `?slap`, `?cuddle`.
+
+---
+
+### ⚙️ 8. Utility & Integrations
+- `?lastfm <login/view/logout>` — Last.fm scrobble card integration.
+- `?spotify [user]` — Inspect live Spotify track cards.
+- `?crypto [coin]` — Real-time cryptocurrency prices.
+- `?wikipedia <query>`, `?dictionary <word>`, `?weather <city>`, `?worldclock`.
+- `?translate`, `?qr`, `?shorten`, `?avatar`, `?banner`, `?userinfo`, `?serverinfo`, `?calc`, `?ping`.
 
 ---
 
 ## 🚀 Installation & Running
 
+### Requirements
+- Node.js v18+ (tested on Node.js 26)
+- SQLite3 (`node:sqlite` built-in)
+
+### Setup
 ```bash
-# 1. Clone repository
 git clone https://github.com/itz0cat/dc.git
 cd dc
-
-# 2. Install dependencies
 npm install
+```
 
-# 3. Start bot
+### Configuration
+Create a `.env` file in the root directory:
+```env
+DISCORD_TOKEN=your_bot_token_here
+CLIENT_ID=your_client_id_here
+OWNER_ID=your_discord_user_id
+DEFAULT_PREFIX=?
+```
+
+### Start Bot
+```bash
 npm start
 ```
 
 ---
 
 <div align="center">
-Made with ❤️ by <b>itz0cat</b>
+
+Made with ❤️ by [itz0cat](https://github.com/itz0cat)
+
 </div>
